@@ -88,6 +88,38 @@ The production-ready files will be in the `dist` directory.
 npm run preview
 ```
 
+## Deployment
+
+### GitHub Pages
+
+The application is configured for automatic deployment to GitHub Pages.
+
+#### Automatic Deployment
+
+When you push to the `main` or `master` branch, GitHub Actions will automatically:
+1. Build the application
+2. Deploy to GitHub Pages
+
+Make sure to enable GitHub Pages in your repository settings:
+- Go to Settings > Pages
+- Source: GitHub Actions
+
+#### Manual Deployment
+
+You can also deploy manually using:
+
+```bash
+npm run build
+npm run deploy
+```
+
+This will build the app and push it to the `gh-pages` branch.
+
+#### Live URL
+
+After deployment, your app will be available at:
+`https://rishav394.github.io/oncall-roster-manager/`
+
 ## License
 
 ISC
