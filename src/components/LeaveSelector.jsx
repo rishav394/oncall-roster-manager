@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-export default function LeaveSelector({ members, leaves, onLeavesChange }) {
+export default function LeaveSelector({ members, leaves, onLeavesChange, startDate, endDate }) {
   const [showCustomLeave, setShowCustomLeave] = useState(false);
   const [dateRangeMode, setDateRangeMode] = useState(false);
   const [customLeave, setCustomLeave] = useState({
@@ -8,7 +8,7 @@ export default function LeaveSelector({ members, leaves, onLeavesChange }) {
     date: '',
     startDate: '',
     endDate: '',
-    slot: 'Morning'
+    slot: 'Both'
   });
 
   const handleAddLeave = (type, member = null) => {
@@ -46,6 +46,15 @@ export default function LeaveSelector({ members, leaves, onLeavesChange }) {
         return;
       }
 
+      // Validate dates are within roster range
+      if (startDate && endDate) {
+        if (new Date(customLeave.startDate) < new Date(startDate) ||
+            new Date(customLeave.endDate) > new Date(endDate)) {
+          alert(`Custom leave dates must be within the roster date range (${startDate} to ${endDate})`);
+          return;
+        }
+      }
+
       // Create leave entries for each date in the range
       const start = new Date(customLeave.startDate);
       const end = new Date(customLeave.endDate);
@@ -67,6 +76,15 @@ export default function LeaveSelector({ members, leaves, onLeavesChange }) {
         return;
       }
 
+      // Validate date is within roster range
+      if (startDate && endDate) {
+        if (new Date(customLeave.date) < new Date(startDate) ||
+            new Date(customLeave.date) > new Date(endDate)) {
+          alert(`Custom leave date must be within the roster date range (${startDate} to ${endDate})`);
+          return;
+        }
+      }
+
       newLeaves.push({
         id: Date.now(),
         type: 'custom',
@@ -82,7 +100,7 @@ export default function LeaveSelector({ members, leaves, onLeavesChange }) {
       date: '',
       startDate: '',
       endDate: '',
-      slot: 'Morning'
+      slot: 'Both'
     });
     setShowCustomLeave(false);
   };
@@ -224,31 +242,58 @@ export default function LeaveSelector({ members, leaves, onLeavesChange }) {
             {dateRangeMode ? (
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Start Date</label>
+                  <label className="block text-xs text-gray-600 mb-1">
+                    Start Date
+                    {startDate && endDate && (
+                      <span className="text-gray-500 ml-1 font-normal">
+                        (within roster range)
+                      </span>
+                    )}
+                  </label>
                   <input
                     type="date"
                     value={customLeave.startDate}
                     onChange={(e) => setCustomLeave({ ...customLeave, startDate: e.target.value })}
+                    min={startDate}
+                    max={customLeave.endDate || endDate}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">End Date</label>
+                  <label className="block text-xs text-gray-600 mb-1">
+                    End Date
+                    {startDate && endDate && (
+                      <span className="text-gray-500 ml-1 font-normal">
+                        (within roster range)
+                      </span>
+                    )}
+                  </label>
                   <input
                     type="date"
                     value={customLeave.endDate}
                     onChange={(e) => setCustomLeave({ ...customLeave, endDate: e.target.value })}
+                    min={customLeave.startDate || startDate}
+                    max={endDate}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
             ) : (
               <div>
-                <label className="block text-xs text-gray-600 mb-1">Date</label>
+                <label className="block text-xs text-gray-600 mb-1">
+                  Date
+                  {startDate && endDate && (
+                    <span className="text-gray-500 ml-1 font-normal">
+                      (within roster range)
+                    </span>
+                  )}
+                </label>
                 <input
                   type="date"
                   value={customLeave.date}
                   onChange={(e) => setCustomLeave({ ...customLeave, date: e.target.value })}
+                  min={startDate}
+                  max={endDate}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
