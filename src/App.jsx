@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import LeaveSelector from './components/LeaveSelector';
 import RosterTable from './components/RosterTable';
 import { generateRoster, formatRosterTable } from './utils/generateRoster';
 import { saveToLocalStorage, loadFromLocalStorage, clearLocalStorage } from './utils/localStorage';
+import { exportToYAML, importFromYAML } from './utils/yamlConfig';
 
 function App() {
   // Get today's date and 7 days from now as defaults
@@ -15,6 +16,7 @@ function App() {
   const [endDate, setEndDate] = useState(nextWeek);
   const [leaves, setLeaves] = useState([]);
   const [rosterData, setRosterData] = useState([]);
+  const fileInputRef = useRef(null);
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -88,6 +90,42 @@ function App() {
     }
   };
 
+  const handleExportConfig = () => {
+    const config = {
+      members,
+      startDate,
+      endDate,
+      leaves
+    };
+    exportToYAML(config);
+  };
+
+  const handleImportConfig = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+      const config = await importFromYAML(file);
+
+      // Update state with imported config
+      setMembers(config.members);
+      setMembersInput(config.members.join('\n'));
+      setStartDate(config.startDate);
+      setEndDate(config.endDate);
+      setLeaves(config.leaves);
+      setRosterData([]); // Clear roster to regenerate
+
+      alert('Configuration imported successfully!');
+    } catch (error) {
+      alert(error.message);
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 py-8 px-4">
       <div className="max-w-6xl mx-auto">
@@ -149,19 +187,47 @@ function App() {
               </div>
 
               {/* Action Buttons */}
-              <div className="md:col-span-2 flex gap-4">
-                <button
-                  onClick={handleGenerateRoster}
-                  className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-semibold"
-                >
-                  Generate Roster
-                </button>
-                <button
-                  onClick={handleClearAll}
-                  className="px-6 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-semibold"
-                >
-                  Clear All
-                </button>
+              <div className="md:col-span-2 space-y-3">
+                <div className="flex gap-4">
+                  <button
+                    onClick={handleGenerateRoster}
+                    className="flex-1 px-6 py-3 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors font-semibold"
+                  >
+                    Generate Roster
+                  </button>
+                  <button
+                    onClick={handleClearAll}
+                    className="px-6 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors font-semibold"
+                  >
+                    Clear All
+                  </button>
+                </div>
+
+                {/* Export/Import Buttons */}
+                <div className="flex gap-4">
+                  <button
+                    onClick={handleExportConfig}
+                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors font-medium flex items-center justify-center gap-2"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                    Export Config (YAML)
+                  </button>
+                  <label className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors font-medium flex items-center justify-center gap-2 cursor-pointer">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    </svg>
+                    Import Config (YAML)
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".yaml,.yml"
+                      onChange={handleImportConfig}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
               </div>
             </div>
           </div>
