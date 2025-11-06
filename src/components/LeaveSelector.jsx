@@ -2,12 +2,13 @@ import { useState } from 'react';
 
 export default function LeaveSelector({ members, leaves, onLeavesChange, startDate, endDate }) {
   const [showCustomLeave, setShowCustomLeave] = useState(false);
-  const [dateRangeMode, setDateRangeMode] = useState(false);
+  const [dateSelectionMode, setDateSelectionMode] = useState('single'); // 'single', 'range', 'multiple'
   const [customLeave, setCustomLeave] = useState({
     member: '',
     date: '',
     startDate: '',
     endDate: '',
+    selectedDates: [],
     slot: 'Both'
   });
 
@@ -34,7 +35,7 @@ export default function LeaveSelector({ members, leaves, onLeavesChange, startDa
 
     const newLeaves = [...leaves];
 
-    if (dateRangeMode) {
+    if (dateSelectionMode === 'range') {
       // Date range mode
       if (!customLeave.startDate || !customLeave.endDate) {
         alert('Please select both start and end dates');
@@ -69,6 +70,23 @@ export default function LeaveSelector({ members, leaves, onLeavesChange, startDa
           slot: customLeave.slot
         });
       }
+    } else if (dateSelectionMode === 'multiple') {
+      // Multiple dates mode
+      if (customLeave.selectedDates.length === 0) {
+        alert('Please select at least one date');
+        return;
+      }
+
+      // Create leave entries for each selected date
+      customLeave.selectedDates.forEach((dateStr, index) => {
+        newLeaves.push({
+          id: Date.now() + Math.random() + index,
+          type: 'custom',
+          member: customLeave.member,
+          date: dateStr,
+          slot: customLeave.slot
+        });
+      });
     } else {
       // Single date mode
       if (!customLeave.date) {
@@ -100,9 +118,26 @@ export default function LeaveSelector({ members, leaves, onLeavesChange, startDa
       date: '',
       startDate: '',
       endDate: '',
+      selectedDates: [],
       slot: 'Both'
     });
     setShowCustomLeave(false);
+  };
+
+  // Add/remove date from multiple dates selection
+  const handleToggleDate = (dateStr) => {
+    const currentDates = customLeave.selectedDates;
+    if (currentDates.includes(dateStr)) {
+      setCustomLeave({
+        ...customLeave,
+        selectedDates: currentDates.filter(d => d !== dateStr)
+      });
+    } else {
+      setCustomLeave({
+        ...customLeave,
+        selectedDates: [...currentDates, dateStr].sort()
+      });
+    }
   };
 
   const handleRemoveLeave = (id) => {
@@ -221,19 +256,16 @@ export default function LeaveSelector({ members, leaves, onLeavesChange, startDa
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-semibold text-gray-700">Add Custom Leave</h3>
             <div className="flex items-center gap-2">
-              <label className="text-sm text-gray-600">Date Range Mode:</label>
-              <button
-                onClick={() => setDateRangeMode(!dateRangeMode)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  dateRangeMode ? 'bg-blue-600' : 'bg-gray-300'
-                }`}
+              <label className="text-sm text-gray-600">Date Selection:</label>
+              <select
+                value={dateSelectionMode}
+                onChange={(e) => setDateSelectionMode(e.target.value)}
+                className="px-3 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
               >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    dateRangeMode ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-                />
-              </button>
+                <option value="single">Single Date</option>
+                <option value="range">Date Range</option>
+                <option value="multiple">Multiple Dates</option>
+              </select>
             </div>
           </div>
 
@@ -251,7 +283,7 @@ export default function LeaveSelector({ members, leaves, onLeavesChange, startDa
             </select>
 
             {/* Date Selection */}
-            {dateRangeMode ? (
+            {dateSelectionMode === 'range' ? (
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-gray-600 mb-1">
@@ -290,6 +322,53 @@ export default function LeaveSelector({ members, leaves, onLeavesChange, startDa
                   />
                 </div>
               </div>
+            ) : dateSelectionMode === 'multiple' ? (
+              <div>
+                <label className="block text-xs text-gray-600 mb-2">
+                  Select Multiple Dates (e.g., 3, 6, 12, etc.)
+                  <span className="text-gray-500 ml-1 font-normal">
+                    {customLeave.selectedDates.length} date(s) selected
+                  </span>
+                </label>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="date"
+                    min={startDate}
+                    max={endDate}
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        handleToggleDate(e.target.value);
+                        e.target.value = '';
+                      }
+                    }}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <button
+                    onClick={() => setCustomLeave({ ...customLeave, selectedDates: [] })}
+                    className="px-3 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 text-sm"
+                  >
+                    Clear All
+                  </button>
+                </div>
+                {customLeave.selectedDates.length > 0 && (
+                  <div className="flex flex-wrap gap-2 p-2 bg-white border border-gray-300 rounded-md max-h-32 overflow-y-auto">
+                    {customLeave.selectedDates.map(date => (
+                      <span
+                        key={date}
+                        className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs"
+                      >
+                        {date}
+                        <button
+                          onClick={() => handleToggleDate(date)}
+                          className="hover:text-blue-900 font-bold"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             ) : (
               <div>
                 <label className="block text-xs text-gray-600 mb-1">
@@ -327,7 +406,9 @@ export default function LeaveSelector({ members, leaves, onLeavesChange, startDa
             onClick={handleAddCustomLeave}
             className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors w-full md:w-auto"
           >
-            {dateRangeMode ? 'Add Date Range Leave' : 'Add Custom Leave'}
+            {dateSelectionMode === 'range' ? 'Add Date Range Leave' :
+             dateSelectionMode === 'multiple' ? `Add Leave for ${customLeave.selectedDates.length} Date(s)` :
+             'Add Custom Leave'}
           </button>
         </div>
       )}
