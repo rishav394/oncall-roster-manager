@@ -94,6 +94,7 @@ export default function LeaveSelector({ members, leaves, onLeavesChange }) {
   const formatLeaveDescription = (leave) => {
     const types = {
       allMorning: 'All Mornings',
+      allEvening: 'All Evenings',
       complete: 'Complete Leave',
       weekend: 'Weekend Leave',
       custom: `Custom: ${leave.date} (${leave.slot})`
@@ -110,7 +111,7 @@ export default function LeaveSelector({ members, leaves, onLeavesChange }) {
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Quick Add Leave:
         </label>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
           <select
             className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             onChange={(e) => {
@@ -122,6 +123,22 @@ export default function LeaveSelector({ members, leaves, onLeavesChange }) {
             defaultValue=""
           >
             <option value="" disabled>All Morning Leave</option>
+            {members.map(member => (
+              <option key={member} value={member}>{member}</option>
+            ))}
+          </select>
+
+          <select
+            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            onChange={(e) => {
+              if (e.target.value) {
+                handleAddLeave('allEvening', e.target.value);
+                e.target.value = '';
+              }
+            }}
+            defaultValue=""
+          >
+            <option value="" disabled>All Evening Leave</option>
             {members.map(member => (
               <option key={member} value={member}>{member}</option>
             ))}
@@ -161,7 +178,7 @@ export default function LeaveSelector({ members, leaves, onLeavesChange }) {
 
           <button
             onClick={() => setShowCustomLeave(!showCustomLeave)}
-            className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+            className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors md:col-span-2"
           >
             {showCustomLeave ? 'Hide Custom' : '+ Custom Leave'}
           </button>

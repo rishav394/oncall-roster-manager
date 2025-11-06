@@ -51,7 +51,7 @@ export default function RosterTable({ rosterData }) {
                 Date
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Morning
+                Morning / Weekend POC
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Evening
@@ -59,29 +59,44 @@ export default function RosterTable({ rosterData }) {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {rosterData.map((row, index) => (
-              <tr
-                key={index}
-                className={getDayOfWeek(row.date) === 'weekend' ? 'bg-blue-50' : 'hover:bg-gray-50'}
-              >
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {formatDate(row.date)}
-                  {getDayOfWeek(row.date) === 'weekend' && (
-                    <span className="ml-2 text-xs text-blue-600 font-semibold">WEEKEND</span>
+            {rosterData.map((row, index) => {
+              const isWeekend = row.isWeekend;
+              return (
+                <tr
+                  key={index}
+                  className={isWeekend ? 'bg-blue-50' : 'hover:bg-gray-50'}
+                >
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {formatDate(row.date)}
+                    {isWeekend && (
+                      <span className="ml-2 text-xs text-blue-600 font-semibold">WEEKEND</span>
+                    )}
+                  </td>
+                  {isWeekend ? (
+                    <>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700" colSpan="2">
+                        <span className={row.weekend === '—' ? 'text-red-500 font-semibold' : 'bg-purple-100 px-3 py-1 rounded-full'}>
+                          {row.weekend} {row.weekend !== '—' && <span className="text-xs text-gray-600 ml-2">(Full Day)</span>}
+                        </span>
+                      </td>
+                    </>
+                  ) : (
+                    <>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                        <span className={row.morning === '—' ? 'text-red-500 font-semibold' : 'bg-blue-100 px-3 py-1 rounded-full'}>
+                          {row.morning}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                        <span className={row.evening === '—' ? 'text-red-500 font-semibold' : 'bg-green-100 px-3 py-1 rounded-full'}>
+                          {row.evening}
+                        </span>
+                      </td>
+                    </>
                   )}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                  <span className={row.morning === '—' ? 'text-red-500 font-semibold' : 'bg-blue-100 px-3 py-1 rounded-full'}>
-                    {row.morning}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                  <span className={row.evening === '—' ? 'text-red-500 font-semibold' : 'bg-green-100 px-3 py-1 rounded-full'}>
-                    {row.evening}
-                  </span>
-                </td>
-              </tr>
-            ))}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
@@ -96,19 +111,36 @@ export default function RosterTable({ rosterData }) {
           </div>
           <div>
             <p className="text-sm text-gray-600">Total Slots</p>
-            <p className="text-lg font-bold text-gray-800">{rosterData.length * 2}</p>
+            <p className="text-lg font-bold text-gray-800">
+              {rosterData.reduce((total, row) => {
+                return total + (row.isWeekend ? 1 : 2);
+              }, 0)}
+            </p>
           </div>
           <div>
             <p className="text-sm text-gray-600">Unfilled Slots</p>
             <p className="text-lg font-bold text-red-600">
-              {rosterData.filter(r => r.morning === '—' || r.evening === '—').length *
-                (rosterData.filter(r => r.morning === '—').length + rosterData.filter(r => r.evening === '—').length > 0 ? 1 : 0)}
+              {rosterData.reduce((count, row) => {
+                if (row.isWeekend) {
+                  return count + (row.weekend === '—' ? 1 : 0);
+                }
+                return count + (row.morning === '—' ? 1 : 0) + (row.evening === '—' ? 1 : 0);
+              }, 0)}
             </p>
           </div>
           <div>
             <p className="text-sm text-gray-600">Coverage</p>
             <p className="text-lg font-bold text-green-600">
-              {((rosterData.filter(r => r.morning !== '—' && r.evening !== '—').length / rosterData.length) * 100).toFixed(1)}%
+              {(() => {
+                const totalSlots = rosterData.reduce((total, row) => total + (row.isWeekend ? 1 : 2), 0);
+                const filledSlots = rosterData.reduce((count, row) => {
+                  if (row.isWeekend) {
+                    return count + (row.weekend !== '—' ? 1 : 0);
+                  }
+                  return count + (row.morning !== '—' ? 1 : 0) + (row.evening !== '—' ? 1 : 0);
+                }, 0);
+                return totalSlots > 0 ? ((filledSlots / totalSlots) * 100).toFixed(1) : 0;
+              })()}%
             </p>
           </div>
         </div>

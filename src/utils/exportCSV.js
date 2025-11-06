@@ -2,7 +2,7 @@ import Papa from 'papaparse';
 
 /**
  * Export roster table to CSV file
- * @param {Array} rosterData - Array of {date, morning, evening} objects
+ * @param {Array} rosterData - Array of {date, morning, evening, weekend, isWeekend} objects
  * @param {string} filename - Filename for the CSV (optional)
  */
 export function exportToCSV(rosterData, filename = 'oncall-roster.csv') {
@@ -12,16 +12,27 @@ export function exportToCSV(rosterData, filename = 'oncall-roster.csv') {
   }
 
   // Format data for CSV with proper headers
-  const csvData = rosterData.map(row => ({
-    'Date': row.date,
-    'Morning': row.morning,
-    'Evening': row.evening
-  }));
+  const csvData = rosterData.map(row => {
+    if (row.isWeekend) {
+      return {
+        'Date': row.date,
+        'Morning': '',
+        'Evening': '',
+        'Weekend POC': row.weekend
+      };
+    }
+    return {
+      'Date': row.date,
+      'Morning': row.morning,
+      'Evening': row.evening,
+      'Weekend POC': ''
+    };
+  });
 
   // Convert to CSV using papaparse
   const csv = Papa.unparse(csvData, {
     header: true,
-    columns: ['Date', 'Morning', 'Evening']
+    columns: ['Date', 'Morning', 'Evening', 'Weekend POC']
   });
 
   // Create blob and download

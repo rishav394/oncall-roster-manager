@@ -1,5 +1,6 @@
 /**
  * Generate slots for all days in the date range
+ * On weekends (Sat/Sun), only create 1 'Weekend' slot instead of Morning/Evening
  * @param {string} startDate - Start date (YYYY-MM-DD)
  * @param {string} endDate - End date (YYYY-MM-DD)
  * @returns {Array} Array of {date, slot, index} objects
@@ -12,8 +13,17 @@ function getSlots(startDate, endDate) {
 
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
     const dateStr = d.toISOString().split('T')[0];
-    slots.push({ date: dateStr, slot: 'Morning', index: index++ });
-    slots.push({ date: dateStr, slot: 'Evening', index: index++ });
+    const dayOfWeek = d.getDay(); // 0 = Sunday, 6 = Saturday
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+
+    if (isWeekend) {
+      // On weekends, only 1 slot for full day coverage
+      slots.push({ date: dateStr, slot: 'Weekend', index: index++ });
+    } else {
+      // Weekdays have Morning and Evening slots
+      slots.push({ date: dateStr, slot: 'Morning', index: index++ });
+      slots.push({ date: dateStr, slot: 'Evening', index: index++ });
+    }
   }
 
   return slots;
@@ -23,7 +33,7 @@ function getSlots(startDate, endDate) {
  * Check if a member is on leave for a specific date and slot
  * @param {string} member - Member name
  * @param {string} date - Date string (YYYY-MM-DD)
- * @param {string} slot - 'Morning' or 'Evening'
+ * @param {string} slot - 'Morning', 'Evening', or 'Weekend'
  * @param {Array} leaves - Array of leave objects
  * @returns {boolean} True if member is on leave
  */
@@ -36,13 +46,23 @@ function isOnLeave(member, date, slot, leaves) {
 
     // Check custom leave (specific date and slot)
     if (leave.type === 'custom' && leave.date === date) {
+      // If custom leave is 'Both', it applies to Weekend slot on weekends
       if (leave.slot === 'Both' || leave.slot === slot) {
+        return true;
+      }
+      // On weekends, Morning or Evening custom leaves also block the Weekend slot
+      if (slot === 'Weekend' && (leave.slot === 'Morning' || leave.slot === 'Evening')) {
         return true;
       }
     }
 
-    // Check all morning leave
+    // Check all morning leave (doesn't apply to Weekend slot)
     if (leave.type === 'allMorning' && slot === 'Morning') {
+      return true;
+    }
+
+    // Check all evening leave (doesn't apply to Weekend slot)
+    if (leave.type === 'allEvening' && slot === 'Evening') {
       return true;
     }
 
@@ -112,20 +132,25 @@ export function generateRoster(members, startDate, endDate, leaves) {
 /**
  * Convert assignments array to roster table format
  * @param {Array} assignments - Array from generateRoster
- * @returns {Array} Array of {date, morning, evening} objects
+ * @returns {Array} Array of {date, morning, evening, weekend, isWeekend} objects
  */
 export function formatRosterTable(assignments) {
   const rosterMap = new Map();
 
   for (const { date, slot, member } of assignments) {
     if (!rosterMap.has(date)) {
-      rosterMap.set(date, { date, morning: '', evening: '' });
+      const dateObj = new Date(date);
+      const dayOfWeek = dateObj.getDay();
+      const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+      rosterMap.set(date, { date, morning: '', evening: '', weekend: '', isWeekend });
     }
     const row = rosterMap.get(date);
     if (slot === 'Morning') {
       row.morning = member;
-    } else {
+    } else if (slot === 'Evening') {
       row.evening = member;
+    } else if (slot === 'Weekend') {
+      row.weekend = member;
     }
   }
 
