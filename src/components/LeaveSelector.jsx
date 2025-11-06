@@ -2,9 +2,12 @@ import { useState } from 'react';
 
 export default function LeaveSelector({ members, leaves, onLeavesChange }) {
   const [showCustomLeave, setShowCustomLeave] = useState(false);
+  const [dateRangeMode, setDateRangeMode] = useState(false);
   const [customLeave, setCustomLeave] = useState({
     member: '',
     date: '',
+    startDate: '',
+    endDate: '',
     slot: 'Morning'
   });
 
@@ -24,21 +27,63 @@ export default function LeaveSelector({ members, leaves, onLeavesChange }) {
   };
 
   const handleAddCustomLeave = () => {
-    if (!customLeave.member || !customLeave.date) {
-      alert('Please select member and date');
+    if (!customLeave.member) {
+      alert('Please select a member');
       return;
     }
 
-    const newLeave = {
-      id: Date.now(),
-      type: 'custom',
-      member: customLeave.member,
-      date: customLeave.date,
-      slot: customLeave.slot
-    };
+    const newLeaves = [...leaves];
 
-    onLeavesChange([...leaves, newLeave]);
-    setCustomLeave({ member: members[0] || '', date: '', slot: 'Morning' });
+    if (dateRangeMode) {
+      // Date range mode
+      if (!customLeave.startDate || !customLeave.endDate) {
+        alert('Please select both start and end dates');
+        return;
+      }
+
+      if (new Date(customLeave.startDate) > new Date(customLeave.endDate)) {
+        alert('Start date must be before or equal to end date');
+        return;
+      }
+
+      // Create leave entries for each date in the range
+      const start = new Date(customLeave.startDate);
+      const end = new Date(customLeave.endDate);
+
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const dateStr = d.toISOString().split('T')[0];
+        newLeaves.push({
+          id: Date.now() + Math.random(), // Unique ID for each date
+          type: 'custom',
+          member: customLeave.member,
+          date: dateStr,
+          slot: customLeave.slot
+        });
+      }
+    } else {
+      // Single date mode
+      if (!customLeave.date) {
+        alert('Please select a date');
+        return;
+      }
+
+      newLeaves.push({
+        id: Date.now(),
+        type: 'custom',
+        member: customLeave.member,
+        date: customLeave.date,
+        slot: customLeave.slot
+      });
+    }
+
+    onLeavesChange(newLeaves);
+    setCustomLeave({
+      member: members[0] || '',
+      date: '',
+      startDate: '',
+      endDate: '',
+      slot: 'Morning'
+    });
     setShowCustomLeave(false);
   };
 
@@ -126,8 +171,27 @@ export default function LeaveSelector({ members, leaves, onLeavesChange }) {
       {/* Custom Leave Form */}
       {showCustomLeave && (
         <div className="mb-4 p-4 bg-gray-50 rounded-md border border-gray-200">
-          <h3 className="font-semibold mb-3 text-gray-700">Add Custom Leave</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="font-semibold text-gray-700">Add Custom Leave</h3>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-gray-600">Date Range Mode:</label>
+              <button
+                onClick={() => setDateRangeMode(!dateRangeMode)}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  dateRangeMode ? 'bg-blue-600' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    dateRangeMode ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3">
+            {/* Member Selection */}
             <select
               value={customLeave.member}
               onChange={(e) => setCustomLeave({ ...customLeave, member: e.target.value })}
@@ -139,13 +203,41 @@ export default function LeaveSelector({ members, leaves, onLeavesChange }) {
               ))}
             </select>
 
-            <input
-              type="date"
-              value={customLeave.date}
-              onChange={(e) => setCustomLeave({ ...customLeave, date: e.target.value })}
-              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            {/* Date Selection */}
+            {dateRangeMode ? (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Start Date</label>
+                  <input
+                    type="date"
+                    value={customLeave.startDate}
+                    onChange={(e) => setCustomLeave({ ...customLeave, startDate: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">End Date</label>
+                  <input
+                    type="date"
+                    value={customLeave.endDate}
+                    onChange={(e) => setCustomLeave({ ...customLeave, endDate: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Date</label>
+                <input
+                  type="date"
+                  value={customLeave.date}
+                  onChange={(e) => setCustomLeave({ ...customLeave, date: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            )}
 
+            {/* Slot Selection */}
             <select
               value={customLeave.slot}
               onChange={(e) => setCustomLeave({ ...customLeave, slot: e.target.value })}
@@ -153,15 +245,15 @@ export default function LeaveSelector({ members, leaves, onLeavesChange }) {
             >
               <option value="Morning">Morning</option>
               <option value="Evening">Evening</option>
-              <option value="Both">Both</option>
+              <option value="Both">Both Slots</option>
             </select>
           </div>
 
           <button
             onClick={handleAddCustomLeave}
-            className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            className="mt-3 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors w-full md:w-auto"
           >
-            Add Custom Leave
+            {dateRangeMode ? 'Add Date Range Leave' : 'Add Custom Leave'}
           </button>
         </div>
       )}
