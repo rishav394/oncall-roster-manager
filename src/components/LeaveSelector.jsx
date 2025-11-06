@@ -115,9 +115,21 @@ export default function LeaveSelector({ members, leaves, onLeavesChange, startDa
       allEvening: 'All Evenings',
       complete: 'Complete Leave',
       weekend: 'Weekend Leave',
-      custom: `Custom: ${leave.date} (${leave.slot})`
+      custom: `${leave.date} (${leave.slot})`
     };
-    return `${leave.member} - ${types[leave.type] || leave.type}`;
+    return types[leave.type] || leave.type;
+  };
+
+  // Group leaves by member
+  const groupLeavesByMember = () => {
+    const grouped = {};
+    leaves.forEach(leave => {
+      if (!grouped[leave.member]) {
+        grouped[leave.member] = [];
+      }
+      grouped[leave.member].push(leave);
+    });
+    return grouped;
   };
 
   return (
@@ -323,22 +335,66 @@ export default function LeaveSelector({ members, leaves, onLeavesChange, startDa
       {/* Leaves List */}
       {leaves.length > 0 && (
         <div className="mt-4">
-          <h3 className="font-semibold mb-2 text-gray-700">Active Leaves:</h3>
-          <div className="space-y-2">
-            {leaves.map(leave => (
-              <div
-                key={leave.id}
-                className="flex items-center justify-between p-3 bg-blue-50 rounded-md border border-blue-200"
-              >
-                <span className="text-sm text-gray-700">
-                  {formatLeaveDescription(leave)}
-                </span>
-                <button
-                  onClick={() => handleRemoveLeave(leave.id)}
-                  className="text-red-600 hover:text-red-800 font-medium text-sm"
-                >
-                  Remove
-                </button>
+          <h3 className="font-semibold mb-3 text-gray-700">Active Leaves:</h3>
+          <div className="space-y-4">
+            {Object.entries(groupLeavesByMember()).map(([member, memberLeaves]) => (
+              <div key={member} className="border border-gray-200 rounded-lg overflow-hidden">
+                {/* Member Header */}
+                <div className="bg-gradient-to-r from-blue-100 to-blue-50 px-4 py-2 border-b border-blue-200">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-gray-800">
+                      {member}
+                      <span className="ml-2 text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full">
+                        {memberLeaves.length} {memberLeaves.length === 1 ? 'leave' : 'leaves'}
+                      </span>
+                    </h4>
+                    <button
+                      onClick={() => {
+                        // Remove all leaves for this member
+                        const remainingLeaves = leaves.filter(l => l.member !== member);
+                        onLeavesChange(remainingLeaves);
+                      }}
+                      className="text-xs text-red-600 hover:text-red-800 font-medium"
+                    >
+                      Remove All
+                    </button>
+                  </div>
+                </div>
+
+                {/* Member's Leaves */}
+                <div className="bg-white divide-y divide-gray-100">
+                  {memberLeaves.map(leave => (
+                    <div
+                      key={leave.id}
+                      className="flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs px-2 py-1 rounded font-medium ${
+                          leave.type === 'custom' ? 'bg-purple-100 text-purple-700' :
+                          leave.type === 'allMorning' ? 'bg-blue-100 text-blue-700' :
+                          leave.type === 'allEvening' ? 'bg-green-100 text-green-700' :
+                          leave.type === 'weekend' ? 'bg-indigo-100 text-indigo-700' :
+                          'bg-red-100 text-red-700'
+                        }`}>
+                          {leave.type === 'custom' ? 'Custom' :
+                           leave.type === 'allMorning' ? 'All Morning' :
+                           leave.type === 'allEvening' ? 'All Evening' :
+                           leave.type === 'weekend' ? 'Weekend' :
+                           'Complete'}
+                        </span>
+                        <span className="text-sm text-gray-700">
+                          {formatLeaveDescription(leave)}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => handleRemoveLeave(leave.id)}
+                        className="text-red-600 hover:text-red-800 font-medium text-xs"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             ))}
           </div>
