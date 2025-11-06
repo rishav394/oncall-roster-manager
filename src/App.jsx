@@ -248,15 +248,96 @@ function App() {
         <RosterTable rosterData={rosterData} />
 
         {/* Footer Info */}
-        <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
-          <h3 className="font-semibold text-blue-900 mb-2">How it works:</h3>
-          <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-            <li>Each day has two slots: Morning and Evening</li>
-            <li>Each member must have at least 2 slots gap between consecutive oncalls</li>
-            <li>The algorithm balances workload evenly across all team members</li>
-            <li>Leaves are automatically respected during roster generation</li>
-            <li>Your settings are automatically saved locally</li>
-          </ul>
+        <div className="mt-8 space-y-6">
+          {/* How it Works */}
+          <div className="p-6 bg-blue-50 rounded-lg border border-blue-200">
+            <h3 className="font-bold text-blue-900 mb-4 text-lg">How it Works</h3>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <h4 className="font-semibold text-blue-800 mb-2">Scheduling Rules</h4>
+                <ul className="text-sm text-blue-800 space-y-1.5 list-disc list-inside">
+                  <li><strong>Weekdays:</strong> Morning and Evening slots (2 per day)</li>
+                  <li><strong>Weekends:</strong> Single full-day slot (Sat/Sun)</li>
+                  <li><strong>Gap Rule:</strong> Minimum 2-slot gap between consecutive oncalls</li>
+                  <li><strong>Balancing:</strong> Greedy algorithm distributes workload evenly</li>
+                  <li><strong>Leaves:</strong> Automatically respected during generation</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold text-blue-800 mb-2">Leave Types</h4>
+                <ul className="text-sm text-blue-800 space-y-1.5 list-disc list-inside">
+                  <li><strong>All Morning:</strong> Every morning in date range</li>
+                  <li><strong>All Evening:</strong> Every evening in date range</li>
+                  <li><strong>Weekend Leave:</strong> All Saturdays and Sundays</li>
+                  <li><strong>Complete Leave:</strong> Entire date range</li>
+                  <li><strong>Custom Leave:</strong> Specific dates/slots (see modes below)</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Features */}
+          <div className="p-6 bg-green-50 rounded-lg border border-green-200">
+            <h3 className="font-bold text-green-900 mb-4 text-lg">Key Features</h3>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <h4 className="font-semibold text-green-800 mb-2">Visualization</h4>
+                <ul className="text-sm text-green-800 space-y-1.5 list-disc list-inside">
+                  <li><strong>Calendar View:</strong> Visual month/week grid layout</li>
+                  <li><strong>Table View:</strong> Detailed day-by-day roster table</li>
+                  <li><strong>Statistics:</strong> Total days, slots, coverage percentage</li>
+                  <li><strong>Color Coding:</strong> Different colors for morning/evening/weekend</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold text-green-800 mb-2">Data Management</h4>
+                <ul className="text-sm text-green-800 space-y-1.5 list-disc list-inside">
+                  <li><strong>Auto-Save:</strong> Settings saved to browser localStorage</li>
+                  <li><strong>Export (YAML):</strong> Download configuration as YAML file</li>
+                  <li><strong>Import (YAML):</strong> Upload and restore configurations</li>
+                  <li><strong>CSV Export:</strong> Download roster as spreadsheet</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          {/* Custom Leave Modes */}
+          <div className="p-6 bg-purple-50 rounded-lg border border-purple-200">
+            <h3 className="font-bold text-purple-900 mb-4 text-lg">Custom Leave Date Selection Modes</h3>
+            <div className="grid md:grid-cols-3 gap-4">
+              <div>
+                <h4 className="font-semibold text-purple-800 mb-2">Single Date</h4>
+                <p className="text-sm text-purple-800 mb-1">Pick one specific date</p>
+                <p className="text-xs text-purple-700 italic">Example: Nov 15th only</p>
+              </div>
+              <div>
+                <h4 className="font-semibold text-purple-800 mb-2">Date Range</h4>
+                <p className="text-sm text-purple-800 mb-1">Select consecutive dates (start → end)</p>
+                <p className="text-xs text-purple-700 italic">Example: Nov 10-15 (6 days)</p>
+              </div>
+              <div>
+                <h4 className="font-semibold text-purple-800 mb-2">Multiple Dates</h4>
+                <p className="text-sm text-purple-800 mb-1">Pick individual non-consecutive dates</p>
+                <p className="text-xs text-purple-700 italic">Example: 3rd, 6th, 12th, 20th</p>
+              </div>
+            </div>
+            <p className="text-sm text-purple-800 mt-3">
+              💡 <strong>Tip:</strong> All custom leave dates are automatically constrained to your roster's date range
+            </p>
+          </div>
+
+          {/* Tips */}
+          <div className="p-6 bg-amber-50 rounded-lg border border-amber-200">
+            <h3 className="font-bold text-amber-900 mb-3 text-lg">Pro Tips</h3>
+            <ul className="text-sm text-amber-800 space-y-2">
+              <li>🔄 <strong>Switch Views:</strong> Toggle between Calendar and Table views to see roster in different formats</li>
+              <li>👥 <strong>Grouped Leaves:</strong> Leaves are organized by team member for easy management</li>
+              <li>💾 <strong>Backup Config:</strong> Export your configuration before making major changes</li>
+              <li>📤 <strong>Share Config:</strong> Share YAML files with team leads or across devices</li>
+              <li>🎯 <strong>Smart Dates:</strong> Use Multiple Dates mode for irregular leave patterns (e.g., every Monday)</li>
+              <li>📊 <strong>Check Coverage:</strong> Review statistics to ensure adequate coverage before finalizing</li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>
