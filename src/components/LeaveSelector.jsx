@@ -8,7 +8,7 @@ export default function LeaveSelector({ members, leaves, onLeavesChange }) {
     date: '',
     startDate: '',
     endDate: '',
-    slot: 'Morning'
+    slot: 'Both'
   });
 
   const handleAddLeave = (type, member = null) => {
@@ -82,7 +82,7 @@ export default function LeaveSelector({ members, leaves, onLeavesChange }) {
       date: '',
       startDate: '',
       endDate: '',
-      slot: 'Morning'
+      slot: 'Both'
     });
     setShowCustomLeave(false);
   };
