@@ -173,6 +173,8 @@ function App() {
             members={members}
             leaves={leaves}
             onLeavesChange={setLeaves}
+            startDate={startDate}
+            endDate={endDate}
           />
         </div>
 
