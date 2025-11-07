@@ -122,7 +122,8 @@ export function generateRoster(members, startDate, endDate, leaves) {
 
     const chosen = eligible[0];
     assignments.push({ date, slot, member: chosen });
-    load[chosen]++;
+    // Weekend slots count as 2 load units (covers full day)
+    load[chosen] += (slot === 'Weekend' ? 2 : 1);
     lastSlotIndex[chosen] = i;
   }
 
