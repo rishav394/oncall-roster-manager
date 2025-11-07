@@ -21,6 +21,43 @@ export default function RosterTable({ rosterData }) {
     return day === 0 || day === 6 ? 'weekend' : 'weekday';
   };
 
+  // Calculate workload per member
+  const calculateWorkload = () => {
+    const workload = {};
+
+    rosterData.forEach((row) => {
+      if (row.isWeekend) {
+        if (row.weekend && row.weekend !== '—') {
+          if (!workload[row.weekend]) {
+            workload[row.weekend] = { slots: 0, load: 0 };
+          }
+          workload[row.weekend].slots += 1;
+          workload[row.weekend].load += 2; // Weekend counts as 2
+        }
+      } else {
+        if (row.morning && row.morning !== '—') {
+          if (!workload[row.morning]) {
+            workload[row.morning] = { slots: 0, load: 0 };
+          }
+          workload[row.morning].slots += 1;
+          workload[row.morning].load += 1;
+        }
+        if (row.evening && row.evening !== '—') {
+          if (!workload[row.evening]) {
+            workload[row.evening] = { slots: 0, load: 0 };
+          }
+          workload[row.evening].slots += 1;
+          workload[row.evening].load += 1;
+        }
+      }
+    });
+
+    return workload;
+  };
+
+  const workload = calculateWorkload();
+  const maxLoad = Math.max(...Object.values(workload).map(w => w.load), 1);
+
   if (!rosterData || rosterData.length === 0) {
     return (
       <div className="bg-white p-6 rounded-lg shadow-md">
@@ -85,6 +122,56 @@ export default function RosterTable({ rosterData }) {
 
         {/* Calendar View */}
         <CalendarView rosterData={rosterData} />
+
+        {/* Workload Summary for Calendar View */}
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+            </svg>
+            Workload Distribution
+          </h3>
+
+          {Object.keys(workload).length === 0 ? (
+            <p className="text-sm text-gray-500 italic">No assignments yet</p>
+          ) : (
+            <div className="space-y-3">
+              {Object.entries(workload)
+                .sort((a, b) => b[1].load - a[1].load)
+                .map(([member, data]) => {
+                  const percentage = (data.load / maxLoad) * 100;
+                  return (
+                    <div key={member} className="bg-gradient-to-r from-blue-50 to-purple-50 p-3 rounded-lg border border-blue-100">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-medium text-gray-800">{member}</span>
+                        <div className="flex items-center gap-3 text-sm">
+                          <span className="text-gray-600">
+                            {data.slots} slot{data.slots !== 1 ? 's' : ''}
+                          </span>
+                          <span className="font-semibold text-blue-600 bg-white px-2 py-1 rounded shadow-sm">
+                            Load: {data.load}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-blue-500 to-purple-600"
+                          style={{ width: `${percentage}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+              <div className="mt-4 pt-3 border-t border-gray-200">
+                <p className="text-xs text-gray-600">
+                  <span className="font-semibold">Note:</span> Weekend slots count as 2 load units (covers full day).
+                  Load balancing ensures fair distribution across all team members.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     );
   }
@@ -243,6 +330,56 @@ export default function RosterTable({ rosterData }) {
               })()}%
             </p>
           </div>
+        </div>
+
+        {/* Workload Summary */}
+        <div className="mt-6 p-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-md border border-blue-100">
+          <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+            </svg>
+            Workload Distribution
+          </h3>
+
+          {Object.keys(workload).length === 0 ? (
+            <p className="text-sm text-gray-500 italic">No assignments yet</p>
+          ) : (
+            <div className="space-y-3">
+              {Object.entries(workload)
+                .sort((a, b) => b[1].load - a[1].load)
+                .map(([member, data]) => {
+                  const percentage = (data.load / maxLoad) * 100;
+                  return (
+                    <div key={member} className="bg-white p-3 rounded-lg shadow-sm">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-medium text-gray-800">{member}</span>
+                        <div className="flex items-center gap-3 text-sm">
+                          <span className="text-gray-600">
+                            {data.slots} slot{data.slots !== 1 ? 's' : ''}
+                          </span>
+                          <span className="font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded">
+                            Load: {data.load}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-blue-500 to-purple-600"
+                          style={{ width: `${percentage}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+              <div className="mt-4 pt-3 border-t border-blue-200">
+                <p className="text-xs text-gray-600">
+                  <span className="font-semibold">Note:</span> Weekend slots count as 2 load units (covers full day).
+                  Load balancing ensures fair distribution across all team members.
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
       </div>
