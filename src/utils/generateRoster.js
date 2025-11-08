@@ -100,6 +100,7 @@ export function generateRoster(members, startDate, endDate, leaves) {
   const slots = getSlots(startDate, endDate);
   const assignments = [];
   const load = Object.fromEntries(members.map(m => [m, 0]));
+  const weekendSlots = Object.fromEntries(members.map(m => [m, 0])); // Track weekend slots separately
   const lastSlotIndex = Object.fromEntries(members.map(m => [m, -Infinity]));
 
   for (let i = 0; i < slots.length; i++) {
@@ -117,13 +118,30 @@ export function generateRoster(members, startDate, endDate, leaves) {
       continue;
     }
 
-    // Sort by load (least assigned first)
-    eligible.sort((a, b) => load[a] - load[b]);
+    // For weekend slots, prefer members with fewer weekend assignments
+    // Then sort by total load (least assigned first)
+    if (slot === 'Weekend') {
+      eligible.sort((a, b) => {
+        // First, prioritize members with fewer weekend slots
+        if (weekendSlots[a] !== weekendSlots[b]) {
+          return weekendSlots[a] - weekendSlots[b];
+        }
+        // If equal weekend slots, sort by total load
+        return load[a] - load[b];
+      });
+    } else {
+      // For weekday slots, just sort by load
+      eligible.sort((a, b) => load[a] - load[b]);
+    }
 
     const chosen = eligible[0];
     assignments.push({ date, slot, member: chosen });
     // Weekend slots count as 2 load units (covers full day)
-    load[chosen] += (slot === 'Weekend' ? 2 : 1);
+    const loadIncrement = slot === 'Weekend' ? 2 : 1;
+    load[chosen] += loadIncrement;
+    if (slot === 'Weekend') {
+      weekendSlots[chosen]++;
+    }
     lastSlotIndex[chosen] = i;
   }
 

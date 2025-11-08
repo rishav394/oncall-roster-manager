@@ -124,51 +124,58 @@ export default function RosterTable({ rosterData }) {
         <CalendarView rosterData={rosterData} />
 
         {/* Workload Summary for Calendar View */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+        <div className="bg-white p-4 rounded-lg shadow-md">
+          <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2 text-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
               <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
             </svg>
             Workload Distribution
+            <span className="text-xs text-gray-500 font-normal ml-1">(Weekend slots = 2 load)</span>
           </h3>
 
           {Object.keys(workload).length === 0 ? (
             <p className="text-sm text-gray-500 italic">No assignments yet</p>
           ) : (
-            <div className="space-y-3">
-              {Object.entries(workload)
-                .sort((a, b) => b[1].load - a[1].load)
-                .map(([member, data]) => {
-                  const percentage = (data.load / maxLoad) * 100;
-                  return (
-                    <div key={member} className="bg-gradient-to-r from-blue-50 to-purple-50 p-3 rounded-lg border border-blue-100">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium text-gray-800">{member}</span>
-                        <div className="flex items-center gap-3 text-sm">
-                          <span className="text-gray-600">
-                            {data.slots} slot{data.slots !== 1 ? 's' : ''}
-                          </span>
-                          <span className="font-semibold text-blue-600 bg-white px-2 py-1 rounded shadow-sm">
-                            Load: {data.load}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-blue-500 to-purple-600"
-                          style={{ width: `${percentage}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  );
-                })}
-
-              <div className="mt-4 pt-3 border-t border-gray-200">
-                <p className="text-xs text-gray-600">
-                  <span className="font-semibold">Note:</span> Weekend slots count as 2 load units (covers full day).
-                  Load balancing ensures fair distribution across all team members.
-                </p>
-              </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-2 px-3 font-medium text-gray-700">Member</th>
+                    <th className="text-center py-2 px-3 font-medium text-gray-700">Slots</th>
+                    <th className="text-center py-2 px-3 font-medium text-gray-700">Load</th>
+                    <th className="text-left py-2 px-3 font-medium text-gray-700">Distribution</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(workload)
+                    .sort((a, b) => b[1].load - a[1].load)
+                    .map(([member, data]) => {
+                      const percentage = (data.load / maxLoad) * 100;
+                      return (
+                        <tr key={member} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="py-2 px-3 font-medium text-gray-800">{member}</td>
+                          <td className="py-2 px-3 text-center text-gray-600">{data.slots}</td>
+                          <td className="py-2 px-3 text-center">
+                            <span className="inline-block bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-semibold">
+                              {data.load}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
+                                <div
+                                  className="h-full rounded-full bg-gradient-to-r from-blue-500 to-purple-600 transition-all duration-300"
+                                  style={{ width: `${percentage}%` }}
+                                ></div>
+                              </div>
+                              <span className="text-xs text-gray-500 w-10 text-right">{percentage.toFixed(0)}%</span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
@@ -333,51 +340,58 @@ export default function RosterTable({ rosterData }) {
         </div>
 
         {/* Workload Summary */}
-        <div className="mt-6 p-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-md border border-blue-100">
-          <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+        <div className="mt-6 p-4 bg-gray-50 rounded-md">
+          <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2 text-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
               <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
             </svg>
             Workload Distribution
+            <span className="text-xs text-gray-500 font-normal ml-1">(Weekend slots = 2 load)</span>
           </h3>
 
           {Object.keys(workload).length === 0 ? (
             <p className="text-sm text-gray-500 italic">No assignments yet</p>
           ) : (
-            <div className="space-y-3">
-              {Object.entries(workload)
-                .sort((a, b) => b[1].load - a[1].load)
-                .map(([member, data]) => {
-                  const percentage = (data.load / maxLoad) * 100;
-                  return (
-                    <div key={member} className="bg-white p-3 rounded-lg shadow-sm">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium text-gray-800">{member}</span>
-                        <div className="flex items-center gap-3 text-sm">
-                          <span className="text-gray-600">
-                            {data.slots} slot{data.slots !== 1 ? 's' : ''}
-                          </span>
-                          <span className="font-semibold text-blue-600 bg-blue-100 px-2 py-1 rounded">
-                            Load: {data.load}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                        <div
-                          className="h-full rounded-full transition-all duration-500 bg-gradient-to-r from-blue-500 to-purple-600"
-                          style={{ width: `${percentage}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  );
-                })}
-
-              <div className="mt-4 pt-3 border-t border-blue-200">
-                <p className="text-xs text-gray-600">
-                  <span className="font-semibold">Note:</span> Weekend slots count as 2 load units (covers full day).
-                  Load balancing ensures fair distribution across all team members.
-                </p>
-              </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm bg-white rounded-md">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="text-left py-2 px-3 font-medium text-gray-700">Member</th>
+                    <th className="text-center py-2 px-3 font-medium text-gray-700">Slots</th>
+                    <th className="text-center py-2 px-3 font-medium text-gray-700">Load</th>
+                    <th className="text-left py-2 px-3 font-medium text-gray-700">Distribution</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Object.entries(workload)
+                    .sort((a, b) => b[1].load - a[1].load)
+                    .map(([member, data]) => {
+                      const percentage = (data.load / maxLoad) * 100;
+                      return (
+                        <tr key={member} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="py-2 px-3 font-medium text-gray-800">{member}</td>
+                          <td className="py-2 px-3 text-center text-gray-600">{data.slots}</td>
+                          <td className="py-2 px-3 text-center">
+                            <span className="inline-block bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-semibold">
+                              {data.load}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3">
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 bg-gray-200 rounded-full h-2 overflow-hidden">
+                                <div
+                                  className="h-full rounded-full bg-gradient-to-r from-blue-500 to-purple-600 transition-all duration-300"
+                                  style={{ width: `${percentage}%` }}
+                                ></div>
+                              </div>
+                              <span className="text-xs text-gray-500 w-10 text-right">{percentage.toFixed(0)}%</span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
