@@ -99,8 +99,10 @@ export function generateRoster(members, startDate, endDate, leaves) {
 
   const slots = getSlots(startDate, endDate);
   const assignments = [];
-  const load = Object.fromEntries(members.map(m => [m, 0]));
-  const weekendSlots = Object.fromEntries(members.map(m => [m, 0])); // Track weekend slots separately
+  const primaryLoad = Object.fromEntries(members.map(m => [m, 0]));
+  const secondaryLoad = Object.fromEntries(members.map(m => [m, 0]));
+  const primaryWeekendSlots = Object.fromEntries(members.map(m => [m, 0])); // Track primary weekend slots
+  const secondaryWeekendSlots = Object.fromEntries(members.map(m => [m, 0])); // Track secondary weekend slots
   const lastPrimaryIndex = Object.fromEntries(members.map(m => [m, -Infinity]));
   const lastSecondaryIndex = Object.fromEntries(members.map(m => [m, -Infinity]));
 
@@ -141,25 +143,28 @@ export function generateRoster(members, startDate, endDate, leaves) {
     let secondary = '—';
 
     if (eligiblePrimary.length > 0) {
-      // Sort primary candidates
+      // Sort primary candidates by PRIMARY LOAD only
       if (slot === 'Weekend') {
         eligiblePrimary.sort((a, b) => {
-          if (weekendSlots[a] !== weekendSlots[b]) {
-            return weekendSlots[a] - weekendSlots[b];
+          // First, prioritize members with fewer primary weekend slots
+          if (primaryWeekendSlots[a] !== primaryWeekendSlots[b]) {
+            return primaryWeekendSlots[a] - primaryWeekendSlots[b];
           }
-          return load[a] - load[b];
+          // Then sort by primary load
+          return primaryLoad[a] - primaryLoad[b];
         });
       } else {
-        eligiblePrimary.sort((a, b) => load[a] - load[b]);
+        // For weekday slots, sort by primary load
+        eligiblePrimary.sort((a, b) => primaryLoad[a] - primaryLoad[b]);
       }
 
       primary = eligiblePrimary[0];
 
       // Update primary tracking
       const loadIncrement = slot === 'Weekend' ? 2 : 1;
-      load[primary] += loadIncrement;
+      primaryLoad[primary] += loadIncrement;
       if (slot === 'Weekend') {
-        weekendSlots[primary]++;
+        primaryWeekendSlots[primary]++;
       }
       lastPrimaryIndex[primary] = i;
 
@@ -167,25 +172,28 @@ export function generateRoster(members, startDate, endDate, leaves) {
       const eligibleSecondary = members.filter(m => isEligibleForSecondary(m, primary));
 
       if (eligibleSecondary.length > 0) {
-        // Sort secondary candidates
+        // Sort secondary candidates by SECONDARY LOAD only
         if (slot === 'Weekend') {
           eligibleSecondary.sort((a, b) => {
-            if (weekendSlots[a] !== weekendSlots[b]) {
-              return weekendSlots[a] - weekendSlots[b];
+            // First, prioritize members with fewer secondary weekend slots
+            if (secondaryWeekendSlots[a] !== secondaryWeekendSlots[b]) {
+              return secondaryWeekendSlots[a] - secondaryWeekendSlots[b];
             }
-            return load[a] - load[b];
+            // Then sort by secondary load
+            return secondaryLoad[a] - secondaryLoad[b];
           });
         } else {
-          eligibleSecondary.sort((a, b) => load[a] - load[b]);
+          // For weekday slots, sort by secondary load
+          eligibleSecondary.sort((a, b) => secondaryLoad[a] - secondaryLoad[b]);
         }
 
         secondary = eligibleSecondary[0];
 
-        // Update secondary tracking (secondary gets half the load weight)
+        // Update secondary tracking
         const secondaryLoadIncrement = slot === 'Weekend' ? 1 : 0.5;
-        load[secondary] += secondaryLoadIncrement;
+        secondaryLoad[secondary] += secondaryLoadIncrement;
         if (slot === 'Weekend') {
-          weekendSlots[secondary] += 0.5; // Half weight for secondary weekend
+          secondaryWeekendSlots[secondary]++;
         }
         lastSecondaryIndex[secondary] = i;
       }
