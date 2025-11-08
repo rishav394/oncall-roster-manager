@@ -136,12 +136,16 @@ export default function RosterTable({ rosterData }) {
 
         {/* Workload Summary for Calendar View */}
         <div className="bg-white p-4 rounded-lg shadow-md">
-          <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2 text-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
-            </svg>
-            Workload Distribution
-            <span className="text-xs text-gray-500 font-normal ml-1">(Weekend slots = 2 load)</span>
+          <h3 className="font-semibold text-gray-800 mb-3 text-sm">
+            <div className="flex items-center gap-2 mb-1">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+              </svg>
+              Workload Distribution
+            </div>
+            <div className="text-xs text-gray-600 font-normal ml-5">
+              Load: Primary Weekday=1.0, Primary Weekend=2.0, Secondary Weekday=0.5, Secondary Weekend=1.0
+            </div>
           </h3>
 
           {Object.keys(workload).length === 0 ? (
@@ -425,12 +429,16 @@ export default function RosterTable({ rosterData }) {
 
         {/* Workload Summary */}
         <div className="mt-6 p-4 bg-gray-50 rounded-md">
-          <h3 className="font-semibold text-gray-800 mb-3 flex items-center gap-2 text-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
-            </svg>
-            Workload Distribution
-            <span className="text-xs text-gray-500 font-normal ml-1">(Weekend slots = 2 load)</span>
+          <h3 className="font-semibold text-gray-800 mb-3 text-sm">
+            <div className="flex items-center gap-2 mb-1">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+              </svg>
+              Workload Distribution
+            </div>
+            <div className="text-xs text-gray-600 font-normal ml-5">
+              Load: Primary Weekday=1.0, Primary Weekend=2.0, Secondary Weekday=0.5, Secondary Weekend=1.0
+            </div>
           </h3>
 
           {Object.keys(workload).length === 0 ? (

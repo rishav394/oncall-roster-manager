@@ -128,8 +128,8 @@ export function generateRoster(members, startDate, endDate, leaves) {
       if (i - lastPrimaryIndex[m] <= 2) return false;
 
       // Check gap from last secondary assignment
-      // Secondary has stricter constraint: ±2 slots
-      if (Math.abs(i - lastSecondaryIndex[m]) <= 2) return false;
+      // Secondary has constraint: ±1 slots
+      if (Math.abs(i - lastSecondaryIndex[m]) <= 1) return false;
 
       return true;
     };
