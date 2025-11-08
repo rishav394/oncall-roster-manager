@@ -252,16 +252,33 @@ function App() {
           {/* How it Works */}
           <div className="p-6 bg-blue-50 rounded-lg border border-blue-200">
             <h3 className="font-bold text-blue-900 mb-4 text-lg">How it Works</h3>
-            <div className="grid md:grid-cols-2 gap-4">
+            <div className="grid md:grid-cols-3 gap-4">
               <div>
                 <h4 className="font-semibold text-blue-800 mb-2">Scheduling Rules</h4>
                 <ul className="text-sm text-blue-800 space-y-1.5 list-disc list-inside">
                   <li><strong>Weekdays:</strong> Morning and Evening slots (2 per day)</li>
                   <li><strong>Weekends:</strong> Single full-day slot (Sat/Sun)</li>
-                  <li><strong>Gap Rule:</strong> Minimum 2-slot gap between consecutive oncalls</li>
-                  <li><strong>Balancing:</strong> Greedy algorithm distributes workload evenly</li>
+                  <li><strong>Primary & Secondary:</strong> Each slot gets 2 POCs</li>
+                  <li><strong>Primary Gap:</strong> Min 2-slot gap between assignments</li>
+                  <li><strong>Secondary Gap:</strong> Min 1-slot gap between assignments</li>
+                  <li><strong>Balancing:</strong> Greedy algorithm distributes load evenly</li>
                   <li><strong>Leaves:</strong> Automatically respected during generation</li>
                 </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold text-blue-800 mb-2">Load Distribution</h4>
+                <div className="text-sm text-blue-800 space-y-2">
+                  <div className="bg-blue-100 p-2 rounded">
+                    <p className="font-semibold mb-1">Weekday Slots:</p>
+                    <p>• Primary: 1.0 load unit</p>
+                    <p>• Secondary: 0.5 load unit</p>
+                  </div>
+                  <div className="bg-blue-100 p-2 rounded">
+                    <p className="font-semibold mb-1">Weekend Slots:</p>
+                    <p>• Primary: 2.0 load units</p>
+                    <p>• Secondary: 1.0 load unit</p>
+                  </div>
+                </div>
               </div>
               <div>
                 <h4 className="font-semibold text-blue-800 mb-2">Leave Types</h4>
