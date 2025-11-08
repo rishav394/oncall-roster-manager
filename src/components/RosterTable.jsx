@@ -25,11 +25,12 @@ export default function RosterTable({ rosterData }) {
   const calculateWorkload = () => {
     const workload = {};
 
-    const addToWorkload = (member, slots, load) => {
+    const addToWorkload = (member, primarySlots, secondarySlots, load) => {
       if (!workload[member]) {
-        workload[member] = { slots: 0, load: 0 };
+        workload[member] = { primarySlots: 0, secondarySlots: 0, load: 0 };
       }
-      workload[member].slots += slots;
+      workload[member].primarySlots += primarySlots;
+      workload[member].secondarySlots += secondarySlots;
       workload[member].load += load;
     };
 
@@ -37,28 +38,28 @@ export default function RosterTable({ rosterData }) {
       if (row.isWeekend) {
         // Weekend primary
         if (row.weekend && row.weekend !== '—') {
-          addToWorkload(row.weekend, 1, 2); // Weekend primary counts as 2
+          addToWorkload(row.weekend, 1, 0, 2); // Weekend primary: 1 primary slot, 2 load
         }
         // Weekend secondary
         if (row.weekendSecondary && row.weekendSecondary !== '—') {
-          addToWorkload(row.weekendSecondary, 0.5, 1); // Weekend secondary counts as 1
+          addToWorkload(row.weekendSecondary, 0, 1, 1); // Weekend secondary: 1 secondary slot, 1 load
         }
       } else {
         // Morning primary
         if (row.morning && row.morning !== '—') {
-          addToWorkload(row.morning, 1, 1);
+          addToWorkload(row.morning, 1, 0, 1);
         }
         // Morning secondary
         if (row.morningSecondary && row.morningSecondary !== '—') {
-          addToWorkload(row.morningSecondary, 0.5, 0.5);
+          addToWorkload(row.morningSecondary, 0, 1, 0.5);
         }
         // Evening primary
         if (row.evening && row.evening !== '—') {
-          addToWorkload(row.evening, 1, 1);
+          addToWorkload(row.evening, 1, 0, 1);
         }
         // Evening secondary
         if (row.eveningSecondary && row.eveningSecondary !== '—') {
-          addToWorkload(row.eveningSecondary, 0.5, 0.5);
+          addToWorkload(row.eveningSecondary, 0, 1, 0.5);
         }
       }
     });
@@ -156,7 +157,8 @@ export default function RosterTable({ rosterData }) {
                 <thead>
                   <tr className="border-b border-gray-200">
                     <th className="text-left py-2 px-3 font-medium text-gray-700">Member</th>
-                    <th className="text-center py-2 px-3 font-medium text-gray-700">Slots</th>
+                    <th className="text-center py-2 px-3 font-medium text-gray-700">Primary</th>
+                    <th className="text-center py-2 px-3 font-medium text-gray-700">Secondary</th>
                     <th className="text-center py-2 px-3 font-medium text-gray-700">Load</th>
                     <th className="text-left py-2 px-3 font-medium text-gray-700">Distribution</th>
                   </tr>
@@ -169,10 +171,11 @@ export default function RosterTable({ rosterData }) {
                       return (
                         <tr key={member} className="border-b border-gray-100 hover:bg-gray-50">
                           <td className="py-2 px-3 font-medium text-gray-800">{member}</td>
-                          <td className="py-2 px-3 text-center text-gray-600">{data.slots}</td>
+                          <td className="py-2 px-3 text-center text-gray-600">{data.primarySlots}</td>
+                          <td className="py-2 px-3 text-center text-gray-600">{data.secondarySlots}</td>
                           <td className="py-2 px-3 text-center">
                             <span className="inline-block bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-semibold">
-                              {data.load}
+                              {data.load.toFixed(1)}
                             </span>
                           </td>
                           <td className="py-2 px-3">
