@@ -1,8 +1,8 @@
 import Papa from 'papaparse';
 
 /**
- * Export roster table to CSV file
- * @param {Array} rosterData - Array of {date, morning, evening, weekend, isWeekend} objects
+ * Export roster table to CSV file with primary and secondary POCs
+ * @param {Array} rosterData - Array of {date, morning, morningSecondary, evening, eveningSecondary, weekend, weekendSecondary, isWeekend} objects
  * @param {string} filename - Filename for the CSV (optional)
  */
 export function exportToCSV(rosterData, filename = 'oncall-roster.csv') {
@@ -16,23 +16,29 @@ export function exportToCSV(rosterData, filename = 'oncall-roster.csv') {
     if (row.isWeekend) {
       return {
         'Date': row.date,
-        'Morning': '',
-        'Evening': '',
-        'Weekend POC': row.weekend
+        'Morning Primary': '',
+        'Morning Secondary': '',
+        'Evening Primary': '',
+        'Evening Secondary': '',
+        'Weekend Primary': row.weekend || '',
+        'Weekend Secondary': row.weekendSecondary || ''
       };
     }
     return {
       'Date': row.date,
-      'Morning': row.morning,
-      'Evening': row.evening,
-      'Weekend POC': ''
+      'Morning Primary': row.morning || '',
+      'Morning Secondary': row.morningSecondary || '',
+      'Evening Primary': row.evening || '',
+      'Evening Secondary': row.eveningSecondary || '',
+      'Weekend Primary': '',
+      'Weekend Secondary': ''
     };
   });
 
   // Convert to CSV using papaparse
   const csv = Papa.unparse(csvData, {
     header: true,
-    columns: ['Date', 'Morning', 'Evening', 'Weekend POC']
+    columns: ['Date', 'Morning Primary', 'Morning Secondary', 'Evening Primary', 'Evening Secondary', 'Weekend Primary', 'Weekend Secondary']
   });
 
   // Create blob and download

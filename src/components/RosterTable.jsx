@@ -25,29 +25,40 @@ export default function RosterTable({ rosterData }) {
   const calculateWorkload = () => {
     const workload = {};
 
+    const addToWorkload = (member, slots, load) => {
+      if (!workload[member]) {
+        workload[member] = { slots: 0, load: 0 };
+      }
+      workload[member].slots += slots;
+      workload[member].load += load;
+    };
+
     rosterData.forEach((row) => {
       if (row.isWeekend) {
+        // Weekend primary
         if (row.weekend && row.weekend !== '—') {
-          if (!workload[row.weekend]) {
-            workload[row.weekend] = { slots: 0, load: 0 };
-          }
-          workload[row.weekend].slots += 1;
-          workload[row.weekend].load += 2; // Weekend counts as 2
+          addToWorkload(row.weekend, 1, 2); // Weekend primary counts as 2
+        }
+        // Weekend secondary
+        if (row.weekendSecondary && row.weekendSecondary !== '—') {
+          addToWorkload(row.weekendSecondary, 0.5, 1); // Weekend secondary counts as 1
         }
       } else {
+        // Morning primary
         if (row.morning && row.morning !== '—') {
-          if (!workload[row.morning]) {
-            workload[row.morning] = { slots: 0, load: 0 };
-          }
-          workload[row.morning].slots += 1;
-          workload[row.morning].load += 1;
+          addToWorkload(row.morning, 1, 1);
         }
+        // Morning secondary
+        if (row.morningSecondary && row.morningSecondary !== '—') {
+          addToWorkload(row.morningSecondary, 0.5, 0.5);
+        }
+        // Evening primary
         if (row.evening && row.evening !== '—') {
-          if (!workload[row.evening]) {
-            workload[row.evening] = { slots: 0, load: 0 };
-          }
-          workload[row.evening].slots += 1;
-          workload[row.evening].load += 1;
+          addToWorkload(row.evening, 1, 1);
+        }
+        // Evening secondary
+        if (row.eveningSecondary && row.eveningSecondary !== '—') {
+          addToWorkload(row.eveningSecondary, 0.5, 0.5);
         }
       }
     });
@@ -245,10 +256,12 @@ export default function RosterTable({ rosterData }) {
                 Date
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Morning / Weekend POC
+                Morning / Weekend
+                <span className="block text-xs font-normal text-gray-400 mt-1">Primary (Secondary)</span>
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Evening
+                <span className="block text-xs font-normal text-gray-400 mt-1">Primary (Secondary)</span>
               </th>
             </tr>
           </thead>
@@ -268,23 +281,62 @@ export default function RosterTable({ rosterData }) {
                   </td>
                   {isWeekend ? (
                     <>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700" colSpan="2">
-                        <span className={row.weekend === '—' ? 'text-red-500 font-semibold' : 'bg-purple-100 px-3 py-1 rounded-full'}>
-                          {row.weekend} {row.weekend !== '—' && <span className="text-xs text-gray-600 ml-2">(Full Day)</span>}
-                        </span>
+                      <td className="px-6 py-4 text-sm text-gray-700" colSpan="2">
+                        <div className="flex flex-col gap-1">
+                          <div>
+                            <span className={row.weekend === '—' ? 'text-red-500 font-semibold' : 'bg-purple-100 px-3 py-1 rounded-full'}>
+                              {row.weekend}
+                            </span>
+                            {row.weekend !== '—' && <span className="text-xs text-gray-500 ml-2">(Primary)</span>}
+                          </div>
+                          {row.weekendSecondary && row.weekendSecondary !== '—' && (
+                            <div>
+                              <span className="bg-purple-50 px-3 py-1 rounded-full text-gray-600">
+                                {row.weekendSecondary}
+                              </span>
+                              <span className="text-xs text-gray-500 ml-2">(Secondary)</span>
+                            </div>
+                          )}
+                        </div>
                       </td>
                     </>
                   ) : (
                     <>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                        <span className={row.morning === '—' ? 'text-red-500 font-semibold' : 'bg-blue-100 px-3 py-1 rounded-full'}>
-                          {row.morning}
-                        </span>
+                      <td className="px-6 py-4 text-sm text-gray-700">
+                        <div className="flex flex-col gap-1">
+                          <div>
+                            <span className={row.morning === '—' ? 'text-red-500 font-semibold' : 'bg-blue-100 px-3 py-1 rounded-full'}>
+                              {row.morning}
+                            </span>
+                            {row.morning !== '—' && <span className="text-xs text-gray-500 ml-2">(P)</span>}
+                          </div>
+                          {row.morningSecondary && row.morningSecondary !== '—' && (
+                            <div>
+                              <span className="bg-blue-50 px-3 py-1 rounded-full text-gray-600">
+                                {row.morningSecondary}
+                              </span>
+                              <span className="text-xs text-gray-500 ml-2">(S)</span>
+                            </div>
+                          )}
+                        </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                        <span className={row.evening === '—' ? 'text-red-500 font-semibold' : 'bg-green-100 px-3 py-1 rounded-full'}>
-                          {row.evening}
-                        </span>
+                      <td className="px-6 py-4 text-sm text-gray-700">
+                        <div className="flex flex-col gap-1">
+                          <div>
+                            <span className={row.evening === '—' ? 'text-red-500 font-semibold' : 'bg-green-100 px-3 py-1 rounded-full'}>
+                              {row.evening}
+                            </span>
+                            {row.evening !== '—' && <span className="text-xs text-gray-500 ml-2">(P)</span>}
+                          </div>
+                          {row.eveningSecondary && row.eveningSecondary !== '—' && (
+                            <div>
+                              <span className="bg-green-50 px-3 py-1 rounded-full text-gray-600">
+                                {row.eveningSecondary}
+                              </span>
+                              <span className="text-xs text-gray-500 ml-2">(S)</span>
+                            </div>
+                          )}
+                        </div>
                       </td>
                     </>
                   )}
@@ -297,14 +349,14 @@ export default function RosterTable({ rosterData }) {
 
       {/* Statistics */}
       <div className="mt-6 p-4 bg-gray-50 rounded-md">
-        <h3 className="font-semibold text-gray-700 mb-2">Statistics</h3>
+        <h3 className="font-semibold text-gray-700 mb-2">Statistics (Primary POC)</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <p className="text-sm text-gray-600">Total Days</p>
             <p className="text-lg font-bold text-gray-800">{rosterData.length}</p>
           </div>
           <div>
-            <p className="text-sm text-gray-600">Total Slots</p>
+            <p className="text-sm text-gray-600">Primary Slots</p>
             <p className="text-lg font-bold text-gray-800">
               {rosterData.reduce((total, row) => {
                 return total + (row.isWeekend ? 1 : 2);
@@ -312,7 +364,7 @@ export default function RosterTable({ rosterData }) {
             </p>
           </div>
           <div>
-            <p className="text-sm text-gray-600">Unfilled Slots</p>
+            <p className="text-sm text-gray-600">Unfilled Primary</p>
             <p className="text-lg font-bold text-red-600">
               {rosterData.reduce((count, row) => {
                 if (row.isWeekend) {
@@ -323,7 +375,7 @@ export default function RosterTable({ rosterData }) {
             </p>
           </div>
           <div>
-            <p className="text-sm text-gray-600">Coverage</p>
+            <p className="text-sm text-gray-600">Primary Coverage</p>
             <p className="text-lg font-bold text-green-600">
               {(() => {
                 const totalSlots = rosterData.reduce((total, row) => total + (row.isWeekend ? 1 : 2), 0);
@@ -334,6 +386,38 @@ export default function RosterTable({ rosterData }) {
                   return count + (row.morning !== '—' ? 1 : 0) + (row.evening !== '—' ? 1 : 0);
                 }, 0);
                 return totalSlots > 0 ? ((filledSlots / totalSlots) * 100).toFixed(1) : 0;
+              })()}%
+            </p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-2 gap-4 mt-4">
+          <div>
+            <p className="text-sm text-gray-600">Secondary Filled</p>
+            <p className="text-lg font-bold text-blue-600">
+              {rosterData.reduce((count, row) => {
+                if (row.isWeekend) {
+                  return count + (row.weekendSecondary && row.weekendSecondary !== '—' ? 1 : 0);
+                }
+                return count +
+                  (row.morningSecondary && row.morningSecondary !== '—' ? 1 : 0) +
+                  (row.eveningSecondary && row.eveningSecondary !== '—' ? 1 : 0);
+              }, 0)}
+            </p>
+          </div>
+          <div>
+            <p className="text-sm text-gray-600">Secondary Coverage</p>
+            <p className="text-lg font-bold text-blue-600">
+              {(() => {
+                const totalSlots = rosterData.reduce((total, row) => total + (row.isWeekend ? 1 : 2), 0);
+                const filledSecondary = rosterData.reduce((count, row) => {
+                  if (row.isWeekend) {
+                    return count + (row.weekendSecondary && row.weekendSecondary !== '—' ? 1 : 0);
+                  }
+                  return count +
+                    (row.morningSecondary && row.morningSecondary !== '—' ? 1 : 0) +
+                    (row.eveningSecondary && row.eveningSecondary !== '—' ? 1 : 0);
+                }, 0);
+                return totalSlots > 0 ? ((filledSecondary / totalSlots) * 100).toFixed(1) : 0;
               })()}%
             </p>
           </div>
