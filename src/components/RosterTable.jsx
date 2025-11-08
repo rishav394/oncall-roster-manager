@@ -462,23 +462,32 @@ export default function RosterTable({ rosterData }) {
                 <thead>
                   <tr className="border-b border-gray-200">
                     <th className="text-left py-2 px-3 font-medium text-gray-700">Member</th>
-                    <th className="text-center py-2 px-3 font-medium text-gray-700">Slots</th>
-                    <th className="text-center py-2 px-3 font-medium text-gray-700">Load</th>
-                    <th className="text-left py-2 px-3 font-medium text-gray-700">Distribution</th>
+                    <th className="text-center py-2 px-3 font-medium text-gray-700">Primary Slots</th>
+                    <th className="text-center py-2 px-3 font-medium text-gray-700">Primary Load</th>
+                    <th className="text-center py-2 px-3 font-medium text-gray-700">Secondary Slots</th>
+                    <th className="text-center py-2 px-3 font-medium text-gray-700">Secondary Load</th>
+                    <th className="text-left py-2 px-3 font-medium text-gray-700">Total Distribution</th>
                   </tr>
                 </thead>
                 <tbody>
                   {Object.entries(workload)
-                    .sort((a, b) => b[1].load - a[1].load)
+                    .sort((a, b) => (b[1].primaryLoad + b[1].secondaryLoad) - (a[1].primaryLoad + a[1].secondaryLoad))
                     .map(([member, data]) => {
-                      const percentage = (data.load / maxLoad) * 100;
+                      const totalLoad = data.primaryLoad + data.secondaryLoad;
+                      const percentage = (totalLoad / maxTotalLoad) * 100;
                       return (
                         <tr key={member} className="border-b border-gray-100 hover:bg-gray-50">
                           <td className="py-2 px-3 font-medium text-gray-800">{member}</td>
-                          <td className="py-2 px-3 text-center text-gray-600">{data.slots}</td>
+                          <td className="py-2 px-3 text-center text-gray-600">{data.primarySlots}</td>
                           <td className="py-2 px-3 text-center">
                             <span className="inline-block bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-semibold">
-                              {data.load}
+                              {data.primaryLoad.toFixed(1)}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3 text-center text-gray-600">{data.secondarySlots}</td>
+                          <td className="py-2 px-3 text-center">
+                            <span className="inline-block bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-semibold">
+                              {data.secondaryLoad.toFixed(1)}
                             </span>
                           </td>
                           <td className="py-2 px-3">
