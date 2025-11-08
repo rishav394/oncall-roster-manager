@@ -81,12 +81,12 @@ function isOnLeave(member, date, slot, leaves) {
 }
 
 /**
- * Generate balanced oncall roster using greedy algorithm
+ * Generate balanced oncall roster with primary and secondary POCs
  * @param {Array} members - Array of member names
  * @param {string} startDate - Start date (YYYY-MM-DD)
  * @param {string} endDate - End date (YYYY-MM-DD)
  * @param {Array} leaves - Array of leave objects
- * @returns {Array} Array of assignments {date, slot, member}
+ * @returns {Array} Array of assignments {date, slot, primary, secondary}
  */
 export function generateRoster(members, startDate, endDate, leaves) {
   if (!members || members.length === 0) {
@@ -101,48 +101,97 @@ export function generateRoster(members, startDate, endDate, leaves) {
   const assignments = [];
   const load = Object.fromEntries(members.map(m => [m, 0]));
   const weekendSlots = Object.fromEntries(members.map(m => [m, 0])); // Track weekend slots separately
-  const lastSlotIndex = Object.fromEntries(members.map(m => [m, -Infinity]));
+  const lastPrimaryIndex = Object.fromEntries(members.map(m => [m, -Infinity]));
+  const lastSecondaryIndex = Object.fromEntries(members.map(m => [m, -Infinity]));
 
   for (let i = 0; i < slots.length; i++) {
     const { date, slot } = slots[i];
 
-    // Find eligible members (not on leave and has 2-slot gap)
-    const eligible = members.filter(m =>
-      !isOnLeave(m, date, slot, leaves) &&
-      i - lastSlotIndex[m] > 2
-    );
+    // Helper function to check if member is eligible based on gap constraints
+    const isEligibleForPrimary = (m) => {
+      if (isOnLeave(m, date, slot, leaves)) return false;
 
-    if (eligible.length === 0) {
-      // No eligible member found
-      assignments.push({ date, slot, member: '—' });
-      continue;
-    }
+      // Check gap from last primary assignment (need >2 slot gap)
+      if (i - lastPrimaryIndex[m] <= 2) return false;
 
-    // For weekend slots, prefer members with fewer weekend assignments
-    // Then sort by total load (least assigned first)
-    if (slot === 'Weekend') {
-      eligible.sort((a, b) => {
-        // First, prioritize members with fewer weekend slots
-        if (weekendSlots[a] !== weekendSlots[b]) {
-          return weekendSlots[a] - weekendSlots[b];
+      // Check gap from last secondary assignment (need >2 slot gap)
+      if (i - lastSecondaryIndex[m] <= 2) return false;
+
+      return true;
+    };
+
+    const isEligibleForSecondary = (m, primaryMember) => {
+      if (m === primaryMember) return false; // Cannot be both primary and secondary
+      if (isOnLeave(m, date, slot, leaves)) return false;
+
+      // Check gap from last primary assignment (need >2 slot gap)
+      if (i - lastPrimaryIndex[m] <= 2) return false;
+
+      // Check gap from last secondary assignment
+      // Secondary has stricter constraint: ±2 slots
+      if (Math.abs(i - lastSecondaryIndex[m]) <= 2) return false;
+
+      return true;
+    };
+
+    // Find eligible members for primary
+    const eligiblePrimary = members.filter(isEligibleForPrimary);
+
+    let primary = '—';
+    let secondary = '—';
+
+    if (eligiblePrimary.length > 0) {
+      // Sort primary candidates
+      if (slot === 'Weekend') {
+        eligiblePrimary.sort((a, b) => {
+          if (weekendSlots[a] !== weekendSlots[b]) {
+            return weekendSlots[a] - weekendSlots[b];
+          }
+          return load[a] - load[b];
+        });
+      } else {
+        eligiblePrimary.sort((a, b) => load[a] - load[b]);
+      }
+
+      primary = eligiblePrimary[0];
+
+      // Update primary tracking
+      const loadIncrement = slot === 'Weekend' ? 2 : 1;
+      load[primary] += loadIncrement;
+      if (slot === 'Weekend') {
+        weekendSlots[primary]++;
+      }
+      lastPrimaryIndex[primary] = i;
+
+      // Find eligible members for secondary (excluding primary)
+      const eligibleSecondary = members.filter(m => isEligibleForSecondary(m, primary));
+
+      if (eligibleSecondary.length > 0) {
+        // Sort secondary candidates
+        if (slot === 'Weekend') {
+          eligibleSecondary.sort((a, b) => {
+            if (weekendSlots[a] !== weekendSlots[b]) {
+              return weekendSlots[a] - weekendSlots[b];
+            }
+            return load[a] - load[b];
+          });
+        } else {
+          eligibleSecondary.sort((a, b) => load[a] - load[b]);
         }
-        // If equal weekend slots, sort by total load
-        return load[a] - load[b];
-      });
-    } else {
-      // For weekday slots, just sort by load
-      eligible.sort((a, b) => load[a] - load[b]);
+
+        secondary = eligibleSecondary[0];
+
+        // Update secondary tracking (secondary gets half the load weight)
+        const secondaryLoadIncrement = slot === 'Weekend' ? 1 : 0.5;
+        load[secondary] += secondaryLoadIncrement;
+        if (slot === 'Weekend') {
+          weekendSlots[secondary] += 0.5; // Half weight for secondary weekend
+        }
+        lastSecondaryIndex[secondary] = i;
+      }
     }
 
-    const chosen = eligible[0];
-    assignments.push({ date, slot, member: chosen });
-    // Weekend slots count as 2 load units (covers full day)
-    const loadIncrement = slot === 'Weekend' ? 2 : 1;
-    load[chosen] += loadIncrement;
-    if (slot === 'Weekend') {
-      weekendSlots[chosen]++;
-    }
-    lastSlotIndex[chosen] = i;
+    assignments.push({ date, slot, primary, secondary });
   }
 
   return assignments;
@@ -151,25 +200,37 @@ export function generateRoster(members, startDate, endDate, leaves) {
 /**
  * Convert assignments array to roster table format
  * @param {Array} assignments - Array from generateRoster
- * @returns {Array} Array of {date, morning, evening, weekend, isWeekend} objects
+ * @returns {Array} Array of {date, morning, morningSecondary, evening, eveningSecondary, weekend, weekendSecondary, isWeekend} objects
  */
 export function formatRosterTable(assignments) {
   const rosterMap = new Map();
 
-  for (const { date, slot, member } of assignments) {
+  for (const { date, slot, primary, secondary } of assignments) {
     if (!rosterMap.has(date)) {
       const dateObj = new Date(date);
       const dayOfWeek = dateObj.getDay();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-      rosterMap.set(date, { date, morning: '', evening: '', weekend: '', isWeekend });
+      rosterMap.set(date, {
+        date,
+        morning: '',
+        morningSecondary: '',
+        evening: '',
+        eveningSecondary: '',
+        weekend: '',
+        weekendSecondary: '',
+        isWeekend
+      });
     }
     const row = rosterMap.get(date);
     if (slot === 'Morning') {
-      row.morning = member;
+      row.morning = primary;
+      row.morningSecondary = secondary;
     } else if (slot === 'Evening') {
-      row.evening = member;
+      row.evening = primary;
+      row.eveningSecondary = secondary;
     } else if (slot === 'Weekend') {
-      row.weekend = member;
+      row.weekend = primary;
+      row.weekendSecondary = secondary;
     }
   }
 

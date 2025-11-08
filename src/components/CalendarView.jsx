@@ -136,8 +136,13 @@ export default function CalendarView({ rosterData }) {
                             <div className={`font-semibold ${
                               day.weekend === '—' ? 'text-red-600' : 'text-purple-700'
                             }`}>
-                              {day.weekend}
+                              {day.weekend} <span className="text-purple-600">(P)</span>
                             </div>
+                            {day.weekendSecondary && day.weekendSecondary !== '—' && (
+                              <div className="text-purple-600 mt-0.5">
+                                {day.weekendSecondary} <span className="text-purple-500">(S)</span>
+                              </div>
+                            )}
                           </div>
                         ) : (
                           // Weekday slots
@@ -149,8 +154,13 @@ export default function CalendarView({ rosterData }) {
                               <div className={`font-semibold ${
                                 day.morning === '—' ? 'text-red-600' : 'text-blue-700'
                               }`}>
-                                {day.morning}
+                                {day.morning} {day.morning !== '—' && <span className="text-blue-600">(P)</span>}
                               </div>
+                              {day.morningSecondary && day.morningSecondary !== '—' && (
+                                <div className="text-blue-600 mt-0.5">
+                                  {day.morningSecondary} <span className="text-blue-500">(S)</span>
+                                </div>
+                              )}
                             </div>
                             <div className="bg-green-100 rounded px-2 py-1.5 text-xs">
                               <div className="font-medium text-green-900 mb-0.5">
@@ -159,8 +169,13 @@ export default function CalendarView({ rosterData }) {
                               <div className={`font-semibold ${
                                 day.evening === '—' ? 'text-red-600' : 'text-green-700'
                               }`}>
-                                {day.evening}
+                                {day.evening} {day.evening !== '—' && <span className="text-green-600">(P)</span>}
                               </div>
+                              {day.eveningSecondary && day.eveningSecondary !== '—' && (
+                                <div className="text-green-600 mt-0.5">
+                                  {day.eveningSecondary} <span className="text-green-500">(S)</span>
+                                </div>
+                              )}
                             </div>
                           </>
                         )}
