@@ -25,41 +25,42 @@ export default function RosterTable({ rosterData }) {
   const calculateWorkload = () => {
     const workload = {};
 
-    const addToWorkload = (member, primarySlots, secondarySlots, load) => {
+    const addToWorkload = (member, primarySlots, secondarySlots, primaryLoad, secondaryLoad) => {
       if (!workload[member]) {
-        workload[member] = { primarySlots: 0, secondarySlots: 0, load: 0 };
+        workload[member] = { primarySlots: 0, secondarySlots: 0, primaryLoad: 0, secondaryLoad: 0 };
       }
       workload[member].primarySlots += primarySlots;
       workload[member].secondarySlots += secondarySlots;
-      workload[member].load += load;
+      workload[member].primaryLoad += primaryLoad;
+      workload[member].secondaryLoad += secondaryLoad;
     };
 
     rosterData.forEach((row) => {
       if (row.isWeekend) {
         // Weekend primary
         if (row.weekend && row.weekend !== '—') {
-          addToWorkload(row.weekend, 1, 0, 2); // Weekend primary: 1 primary slot, 2 load
+          addToWorkload(row.weekend, 1, 0, 2, 0); // 1 primary slot, 2 primary load
         }
         // Weekend secondary
         if (row.weekendSecondary && row.weekendSecondary !== '—') {
-          addToWorkload(row.weekendSecondary, 0, 1, 1); // Weekend secondary: 1 secondary slot, 1 load
+          addToWorkload(row.weekendSecondary, 0, 1, 0, 1); // 1 secondary slot, 1 secondary load
         }
       } else {
         // Morning primary
         if (row.morning && row.morning !== '—') {
-          addToWorkload(row.morning, 1, 0, 1);
+          addToWorkload(row.morning, 1, 0, 1, 0);
         }
         // Morning secondary
         if (row.morningSecondary && row.morningSecondary !== '—') {
-          addToWorkload(row.morningSecondary, 0, 1, 0.5);
+          addToWorkload(row.morningSecondary, 0, 1, 0, 0.5);
         }
         // Evening primary
         if (row.evening && row.evening !== '—') {
-          addToWorkload(row.evening, 1, 0, 1);
+          addToWorkload(row.evening, 1, 0, 1, 0);
         }
         // Evening secondary
         if (row.eveningSecondary && row.eveningSecondary !== '—') {
-          addToWorkload(row.eveningSecondary, 0, 1, 0.5);
+          addToWorkload(row.eveningSecondary, 0, 1, 0, 0.5);
         }
       }
     });
@@ -68,7 +69,9 @@ export default function RosterTable({ rosterData }) {
   };
 
   const workload = calculateWorkload();
-  const maxLoad = Math.max(...Object.values(workload).map(w => w.load), 1);
+  const maxPrimaryLoad = Math.max(...Object.values(workload).map(w => w.primaryLoad), 1);
+  const maxSecondaryLoad = Math.max(...Object.values(workload).map(w => w.secondaryLoad), 1);
+  const maxTotalLoad = Math.max(...Object.values(workload).map(w => w.primaryLoad + w.secondaryLoad), 1);
 
   if (!rosterData || rosterData.length === 0) {
     return (
@@ -157,25 +160,32 @@ export default function RosterTable({ rosterData }) {
                 <thead>
                   <tr className="border-b border-gray-200">
                     <th className="text-left py-2 px-3 font-medium text-gray-700">Member</th>
-                    <th className="text-center py-2 px-3 font-medium text-gray-700">Primary</th>
-                    <th className="text-center py-2 px-3 font-medium text-gray-700">Secondary</th>
-                    <th className="text-center py-2 px-3 font-medium text-gray-700">Load</th>
-                    <th className="text-left py-2 px-3 font-medium text-gray-700">Distribution</th>
+                    <th className="text-center py-2 px-3 font-medium text-gray-700">Primary Slots</th>
+                    <th className="text-center py-2 px-3 font-medium text-gray-700">Primary Load</th>
+                    <th className="text-center py-2 px-3 font-medium text-gray-700">Secondary Slots</th>
+                    <th className="text-center py-2 px-3 font-medium text-gray-700">Secondary Load</th>
+                    <th className="text-left py-2 px-3 font-medium text-gray-700">Total Distribution</th>
                   </tr>
                 </thead>
                 <tbody>
                   {Object.entries(workload)
-                    .sort((a, b) => b[1].load - a[1].load)
+                    .sort((a, b) => (b[1].primaryLoad + b[1].secondaryLoad) - (a[1].primaryLoad + a[1].secondaryLoad))
                     .map(([member, data]) => {
-                      const percentage = (data.load / maxLoad) * 100;
+                      const totalLoad = data.primaryLoad + data.secondaryLoad;
+                      const percentage = (totalLoad / maxTotalLoad) * 100;
                       return (
                         <tr key={member} className="border-b border-gray-100 hover:bg-gray-50">
                           <td className="py-2 px-3 font-medium text-gray-800">{member}</td>
                           <td className="py-2 px-3 text-center text-gray-600">{data.primarySlots}</td>
-                          <td className="py-2 px-3 text-center text-gray-600">{data.secondarySlots}</td>
                           <td className="py-2 px-3 text-center">
                             <span className="inline-block bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs font-semibold">
-                              {data.load.toFixed(1)}
+                              {data.primaryLoad.toFixed(1)}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3 text-center text-gray-600">{data.secondarySlots}</td>
+                          <td className="py-2 px-3 text-center">
+                            <span className="inline-block bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-semibold">
+                              {data.secondaryLoad.toFixed(1)}
                             </span>
                           </td>
                           <td className="py-2 px-3">
