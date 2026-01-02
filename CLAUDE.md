@@ -6,7 +6,7 @@
 
 ## 📋 Project Overview
 
-**Oncall Roster Scheduler** is a frontend-only React application that automatically generates balanced oncall rosters for engineering teams. It uses a greedy balancing algorithm with constraint satisfaction to create fair schedules while respecting team member leaves.
+**Oncall Roster Scheduler** is a frontend-only React application that automatically generates balanced oncall rosters for engineering teams. It uses a greedy balancing algorithm with constraint satisfaction to create fair schedules with **primary and secondary POCs** while respecting team member leaves.
 
 ### Key Characteristics
 - **Tech Stack:** React 19.2 + Vite 7.2 + TailwindCSS v4
@@ -22,28 +22,57 @@
 ### Scheduling Algorithm
 **Location:** `src/utils/generateRoster.js`
 
-**Algorithm Type:** Greedy with constraint satisfaction
+**Algorithm Type:** Greedy with constraint satisfaction and **dual POC assignment**
 
 **Key Constraints:**
-1. **2-Slot Gap Rule:** Each member must have ≥2 slots between consecutive oncalls
-2. **Leave Respect:** Members on leave cannot be assigned
-3. **Load Balancing:** Distributes assignments evenly (least-loaded member gets next slot)
+1. **Primary Gap Rule:** Primary POC must have ≥2 slots between consecutive primary OR secondary assignments
+2. **Secondary Gap Rule:** Secondary POC must have ≥1 slot gap before AND after assignment (±1 slot buffer)
+3. **Role Separation:** Primary and Secondary cannot be the same person for a slot
+4. **Leave Respect:** Members on leave cannot be assigned to any role
+5. **Independent Load Balancing:** Primary load and secondary load are balanced separately
 
 **Slot Types:**
 - **Weekdays (Mon-Fri):** 2 slots per day (Morning, Evening)
 - **Weekends (Sat-Sun):** 1 slot per day (Weekend - full day)
 
+**Load Mapping (Critical for Understanding Balance):**
+```
+Weekday Slots:
+  - Primary POC: 1.0 load unit
+  - Secondary POC: 0.5 load unit
+
+Weekend Slots:
+  - Primary POC: 2.0 load units (covers full day)
+  - Secondary POC: 1.0 load unit
+```
+
 **Process Flow:**
 ```
-1. Generate all slots for date range
+1. Generate all slots for date range (getSlots)
 2. For each slot in order:
-   a. Find eligible members (not on leave, has 2-slot gap)
-   b. Sort by current load (ascending)
-   c. Assign least-loaded member
-   d. Update member's load and last-assigned index
-3. Return assignments array
+   PRIMARY ASSIGNMENT:
+   a. Find eligible members for primary (not on leave, 2-slot gap from both primary AND secondary)
+   b. Sort by PRIMARY load only (ignores secondary load)
+   c. For weekends: prioritize members with fewer primary weekend slots
+   d. Assign member with lowest primary load
+   e. Update primaryLoad and lastPrimaryIndex
+
+   SECONDARY ASSIGNMENT:
+   f. Find eligible members for secondary (not on leave, not primary, 1-slot gap from both roles)
+   g. Sort by SECONDARY load only (ignores primary load)
+   h. For weekends: prioritize members with fewer secondary weekend slots
+   i. Assign member with lowest secondary load
+   j. Update secondaryLoad and lastSecondaryIndex
+
+3. Return assignments array with {date, slot, primary, secondary}
 4. Format into roster table (grouped by date)
 ```
+
+**Why Independent Load Tracking Matters:**
+- If we tracked total load (primary + secondary combined), someone with low primary but high secondary wouldn't get primary slots
+- By tracking separately, we ensure BOTH primary and secondary roles are distributed fairly
+- Example: Alice has 5 primary slots and 0 secondary → still eligible for secondary
+- Example: Bob has 0 primary slots and 5 secondary → still eligible for primary
 
 ---
 
@@ -76,15 +105,23 @@ App.jsx (Main Container)
 │   ├── Export CSV Button
 │   ├── CalendarView.jsx (if calendar mode)
 │   │   ├── Week-based grid layout
-│   │   ├── Day cells with assignments
+│   │   ├── Day cells with PRIMARY (P) and SECONDARY (S) POCs
 │   │   └── Legend
-│   └── Table View (if table mode)
-│       ├── Date/Morning/Evening columns
-│       ├── Weekend highlighting
-│       └── Statistics panel
+│   ├── Table View (if table mode)
+│   │   ├── Date/Morning/Evening columns with Primary & Secondary
+│   │   ├── Weekend highlighting
+│   │   ├── Statistics panel (Primary & Secondary coverage)
+│   │   └── Workload Distribution Table (6 columns)
+│   └── Workload Distribution
+│       ├── Member
+│       ├── Primary Slots
+│       ├── Primary Load (blue badge)
+│       ├── Secondary Slots
+│       ├── Secondary Load (purple badge)
+│       └── Total Distribution (bar chart)
 │
 └── Documentation Sections
-    ├── How it Works (blue)
+    ├── How it Works (blue) - includes load mapping
     ├── Key Features (green)
     ├── Custom Leave Modes (purple)
     └── Pro Tips (amber)
@@ -95,11 +132,24 @@ App.jsx (Main Container)
 **`src/utils/generateRoster.js`**
 - `getSlots()` - Generates slot array from date range
 - `isOnLeave()` - Checks if member is on leave for specific date/slot
-- `generateRoster()` - Main algorithm
-- `formatRosterTable()` - Converts assignments to table format
+- `generateRoster()` - Main algorithm with PRIMARY and SECONDARY POC assignment
+- `formatRosterTable()` - Converts assignments to table format with primary/secondary fields
+
+**Key Variables in generateRoster:**
+```javascript
+const primaryLoad = {}          // Tracks load from primary assignments
+const secondaryLoad = {}        // Tracks load from secondary assignments
+const primaryWeekendSlots = {}  // Counts primary weekend assignments
+const secondaryWeekendSlots = {} // Counts secondary weekend assignments
+const lastPrimaryIndex = {}     // Last index where member was primary
+const lastSecondaryIndex = {}   // Last index where member was secondary
+```
 
 **`src/utils/exportCSV.js`**
-- `exportToCSV()` - Exports roster to CSV using papaparse
+- `exportToCSV()` - Exports roster to CSV with 6 columns:
+  - Morning Primary, Morning Secondary
+  - Evening Primary, Evening Secondary
+  - Weekend Primary, Weekend Secondary
 
 **`src/utils/localStorage.js`**
 - `saveToLocalStorage()` - Persists config
@@ -114,7 +164,27 @@ App.jsx (Main Container)
 
 ## 🎨 Features Implementation Details
 
-### 1. Leave Types
+### 1. Primary & Secondary POC System
+
+**Every slot has TWO POCs:**
+- **Primary POC** - Main responsible person (higher load weight)
+- **Secondary POC** - Backup person (lower load weight)
+
+**Gap Constraints:**
+- **Primary:** If assigned primary at slot i, cannot be primary OR secondary at slots i+1, i+2
+- **Secondary:** If assigned secondary at slot i, cannot be primary OR secondary at slots i-1, i+1
+
+**Load Contribution:**
+- Primary weekday = 1.0, Primary weekend = 2.0
+- Secondary weekday = 0.5, Secondary weekend = 1.0
+
+**UI Representation:**
+- Primary shown in darker badge with "(P)" label
+- Secondary shown in lighter badge with "(S)" label
+- Calendar view: stacked vertically in each slot card
+- Table view: two rows per slot (primary top, secondary bottom)
+
+### 2. Leave Types
 
 **All Morning Leave** (`type: 'allMorning'`)
 - Blocks ALL morning slots in date range
@@ -151,7 +221,7 @@ App.jsx (Main Container)
 - Great for patterns like: 3rd, 6th, 12th, 20th
 - Select slot applies to all dates
 
-### 2. Calendar View
+### 3. Calendar View
 
 **Location:** `src/components/CalendarView.jsx`
 
@@ -163,18 +233,57 @@ App.jsx (Main Container)
 
 **Cell Display:**
 - **Weekdays:** Two cards (Morning blue, Evening green)
+  - Each card shows: Primary (P) and Secondary (S)
 - **Weekends:** One card (Weekend purple)
+  - Shows: Primary (P) and Secondary (S)
 - Weekend badge indicator
 - Unfilled slots in red
 
-**Grouping Logic:**
+### 4. Workload Distribution Table
+
+**Location:** Appears in both Calendar and Table views
+
+**6-Column Layout:**
+1. **Member** - Team member name
+2. **Primary Slots** - Count of primary assignments
+3. **Primary Load** - Weighted load from primary (blue badge, 1 decimal)
+4. **Secondary Slots** - Count of secondary assignments
+5. **Secondary Load** - Weighted load from secondary (purple badge, 1 decimal)
+6. **Total Distribution** - Visual bar chart + percentage
+
+**Sorting:** By total load (primaryLoad + secondaryLoad), descending
+
+**Key Info Display:**
+- Header shows: "Load: Primary Weekday=1.0, Primary Weekend=2.0, Secondary Weekday=0.5, Secondary Weekend=1.0"
+- Makes load calculation transparent
+- Easy to verify fairness
+
+**Calculation in RosterTable.jsx:**
 ```javascript
-// Groups assignments by week starting Sunday
-// Pads incomplete weeks with null cells
-// Ensures 7-column grid alignment
+const calculateWorkload = () => {
+  // Tracks primarySlots, secondarySlots, primaryLoad, secondaryLoad separately
+  // Weekend primary adds: 1 slot, 2.0 load
+  // Weekend secondary adds: 1 slot, 1.0 load
+  // Weekday primary adds: 1 slot, 1.0 load
+  // Weekday secondary adds: 1 slot, 0.5 load
+}
 ```
 
-### 3. YAML Export/Import
+### 5. Statistics Panel
+
+**Primary POC Statistics:**
+- Total Days
+- Primary Slots (total count)
+- Unfilled Primary (count of "—")
+- Primary Coverage (%)
+
+**Secondary POC Statistics:**
+- Secondary Filled (count of assigned secondary slots)
+- Secondary Coverage (%)
+
+**Shows independent metrics for each role**
+
+### 6. YAML Export/Import
 
 **YAML Structure:**
 ```yaml
@@ -207,7 +316,7 @@ leaves:
 4. Update all state
 5. Clear roster (requires regeneration)
 
-### 4. Grouped Leaves Display
+### 7. Grouped Leaves Display
 
 **Location:** `src/components/LeaveSelector.jsx` (lines 416-465)
 
@@ -228,7 +337,7 @@ Bob (1 leave)                       [Remove All]
 - Individual remove buttons
 - Color-coded type badges
 
-### 5. Date Range Constraints
+### 8. Date Range Constraints
 
 **Implementation:** `src/components/LeaveSelector.jsx`
 
@@ -256,6 +365,10 @@ All custom leave date inputs have:
 - 🔵 Blue (`bg-blue-100`) - Morning slots
 - 🟢 Green (`bg-green-100`) - Evening slots
 - 🟣 Purple (`bg-purple-100`) - Weekend slots
+
+**Primary vs Secondary:**
+- **Primary:** Darker badge (e.g., `bg-blue-100`)
+- **Secondary:** Lighter badge (e.g., `bg-blue-50`)
 
 **Leave Type Badges:**
 - 🟣 Purple - Custom
@@ -319,45 +432,136 @@ All custom leave date inputs have:
   rosterData: [                        // Generated roster (formatted)
     {
       date: "2025-11-01",
-      morning: "Alice",
-      evening: "Bob",
+      morning: "Alice",                // Primary POC
+      morningSecondary: "Bob",         // Secondary POC
+      evening: "Carol",                // Primary POC
+      eveningSecondary: "Alice",       // Secondary POC
       weekend: "",                     // Empty for weekdays
+      weekendSecondary: "",
       isWeekend: false
     },
     {
       date: "2025-11-02",              // Saturday
       morning: "",
+      morningSecondary: "",
       evening: "",
-      weekend: "Carol",                // Populated for weekends
+      eveningSecondary: "",
+      weekend: "Carol",                // Primary POC
+      weekendSecondary: "Bob",         // Secondary POC
       isWeekend: true
     }
   ]
 }
 ```
 
-### Leave Object Variations
+### Assignment Object (from generateRoster)
 
 ```javascript
-// All Morning Leave
-{ id: 123, type: "allMorning", member: "Alice" }
+{
+  date: "2025-11-01",
+  slot: "Morning",       // or "Evening" or "Weekend"
+  primary: "Alice",      // Primary POC name or "—"
+  secondary: "Bob"       // Secondary POC name or "—"
+}
+```
 
-// All Evening Leave
-{ id: 124, type: "allEvening", member: "Bob" }
+### Formatted Roster Row
 
-// Weekend Leave
-{ id: 125, type: "weekend", member: "Carol" }
+```javascript
+{
+  date: "2025-11-01",
+  morning: "Alice",              // Primary
+  morningSecondary: "Bob",       // Secondary
+  evening: "Carol",              // Primary
+  eveningSecondary: "Alice",     // Secondary
+  weekend: "",                   // Primary (empty for weekdays)
+  weekendSecondary: "",          // Secondary (empty for weekdays)
+  isWeekend: false
+}
+```
 
-// Complete Leave
-{ id: 126, type: "complete", member: "David" }
+### Workload Object (calculateWorkload result)
 
-// Custom Leave
-{ id: 127, type: "custom", member: "Alice", date: "2025-11-15", slot: "Both" }
-{ id: 128, type: "custom", member: "Bob", date: "2025-11-20", slot: "Morning" }
+```javascript
+{
+  "Alice": {
+    primarySlots: 5,          // Count of primary assignments
+    secondarySlots: 3,        // Count of secondary assignments
+    primaryLoad: 6.0,         // Weighted load from primary
+    secondaryLoad: 2.0        // Weighted load from secondary
+  },
+  "Bob": {
+    primarySlots: 4,
+    secondarySlots: 4,
+    primaryLoad: 5.0,
+    secondaryLoad: 2.5
+  }
+}
 ```
 
 ---
 
 ## 🔧 Key Technical Decisions
+
+### Why Primary & Secondary POCs?
+
+**Problem:** Single POC has no backup if they're unavailable
+**Solution:** Dual POC system ensures coverage redundancy
+
+**Implementation Choice:**
+- Independent load tracking (not combined)
+- Different gap constraints (primary stricter)
+- Different load weights (secondary counts less)
+
+**Why this works:**
+- Fair distribution of BOTH roles
+- Members with high primary still get secondary assignments
+- Members with high secondary still get primary assignments
+- Better overall team coverage
+
+### Why Independent Load Balancing?
+
+**Old approach:** Track total load (primary + secondary)
+**Problem:** Someone with low primary but high secondary won't get primary slots
+**New approach:** Separate primaryLoad and secondaryLoad trackers
+
+**Example:**
+```
+Alice: 0 primary, 10 secondary (total = 10)
+Bob:   5 primary, 0 secondary (total = 5)
+
+Old algorithm for next primary slot:
+  - Bob has lower total load → Bob gets it
+  - Alice NEVER gets primary (unfair!)
+
+New algorithm for next primary slot:
+  - Alice has lower PRIMARY load (0 vs 5) → Alice gets it
+  - Fair distribution of both roles!
+```
+
+### Why Different Gap Constraints?
+
+**Primary:** 2-slot gap (stricter)
+- Main responsibility, needs more rest
+- Prevents burnout
+
+**Secondary:** 1-slot gap (relaxed)
+- Backup role, less demanding
+- Easier to fill slots
+
+### Why These Load Weights?
+
+```
+Primary Weekday: 1.0  (baseline)
+Primary Weekend: 2.0  (2x because full day coverage)
+Secondary Weekday: 0.5  (half of primary)
+Secondary Weekend: 1.0  (half of primary weekend)
+```
+
+**Reasoning:**
+- Weekends are 2x load (morning + evening combined)
+- Secondary is half load (backup role, less responsibility)
+- Maintains proper weight ratios
 
 ### Why No Backend?
 - **Simplicity:** Frontend-only = easy deployment
@@ -367,10 +571,17 @@ All custom leave date inputs have:
 - **Portability:** YAML export/import for sharing
 
 ### Why Greedy Algorithm?
-- **Speed:** O(n*m) where n=slots, m=members
+- **Speed:** O(n*m) where n=slots, m=members - runs in milliseconds
 - **Good Enough:** Produces near-optimal results
 - **Predictable:** Deterministic output
 - **Simple:** Easy to understand and debug
+
+**Potential Improvements:**
+- Prioritize hard-to-fill slots first (heuristic #1)
+- Look-ahead to prevent future problems (heuristic #2)
+- Multi-pass with randomization (heuristic #3)
+- Post-processing swaps (heuristic #4)
+- See conversation about algorithm improvements for details
 
 ### Why LocalStorage + YAML?
 - **Auto-save:** localStorage for convenience
@@ -433,60 +644,39 @@ npm run deploy
 
 ---
 
-## 📝 Recent Major Changes
+## 📝 Recent Major Changes (Chronological)
 
-### Latest Features (Chronological)
+### Phase 1: Initial Implementation
+1. Core scheduling algorithm with single POC
+2. Basic UI with team members, date range
+3. Simple leave management
+4. All Evening Leave
+5. Weekend single slot (changed from 2 to 1)
 
-1. **Initial Implementation**
-   - Core scheduling algorithm
-   - Basic UI with team members, date range
-   - Simple leave management
+### Phase 2: Enhanced Features
+6. Calendar View (set as default)
+7. Default slot: Both
+8. Date range constraints
+9. Grouped leaves display
+10. YAML export/import
+11. Multi-date selection
+12. Comprehensive documentation
 
-2. **All Evening Leave**
-   - Added alongside All Morning
-   - Grid layout updated to 3 columns
+### Phase 3: Workload & Balance
+13. Weekend load counting (1 slot = 2 load units)
+14. Workload distribution visualization
+15. Compact workload table
+16. Weekend assignment optimization
 
-3. **Weekend Single Slot**
-   - Changed from 2 slots (M/E) to 1 slot (Weekend)
-   - Updated algorithm, UI, CSV export
-   - Purple color for weekend slots
-
-4. **Calendar View**
-   - Added beautiful calendar grid layout
-   - View toggle (Calendar/Table)
-   - Week-based organization
-   - Set as default view
-
-5. **Default Slot: Both**
-   - Changed custom leave default from "Morning" to "Both"
-
-6. **Date Range Constraints**
-   - Added min/max to date inputs
-   - Smart linking (start affects end max, vice versa)
-   - Validation with helpful errors
-
-7. **Grouped Leaves Display**
-   - Reorganized leaves by member
-   - Color-coded type badges
-   - Bulk "Remove All" per member
-   - Visual cards with gradients
-
-8. **YAML Export/Import**
-   - Added js-yaml dependency
-   - Export config as YAML file
-   - Import and validate YAML
-   - Green/purple buttons in UI
-
-9. **Multi-Date Selection**
-   - Added "Multiple Dates" mode
-   - Date picker + chips UI
-   - Click × to remove dates
-   - Perfect for non-consecutive patterns
-
-10. **Comprehensive Documentation**
-    - 4 color-coded sections
-    - How it Works, Features, Modes, Tips
-    - Examples and use cases
+### Phase 4: Primary & Secondary POCs (MAJOR UPDATE)
+17. **Dual POC system** - Every slot gets primary AND secondary
+18. **Gap constraints** - Primary (2 slots), Secondary (1 slot)
+19. **Independent load balancing** - Separate tracking for fair distribution
+20. **UI updates** - (P) and (S) labels everywhere
+21. **Workload table** - 6 columns showing separated loads
+22. **Load mapping documentation** - Clear explanation of weights
+23. **Statistics split** - Primary and secondary coverage metrics
+24. **CSV export update** - 6 columns for both roles
 
 ---
 
@@ -497,11 +687,16 @@ npm run deploy
 **Impossible Scenarios:**
 - If constraints are too tight (many leaves + small team), slots may be unfilled
 - Shows "—" for unfilled slots (no alternative suggested)
+- With only 2-3 members, may struggle to fill both primary AND secondary
 
 **No Optimization:**
 - Greedy algorithm doesn't backtrack
 - May not find globally optimal solution
-- Trade-off: Speed vs Perfect balance
+- Could be improved with heuristics (see algorithm discussion)
+
+**Secondary Gap Strictness:**
+- ±1 slot gap for secondary might be too strict for very small teams
+- Can be relaxed if needed
 
 ### UI/UX Considerations
 
@@ -516,6 +711,7 @@ npm run deploy
 **Large Rosters:**
 - Calendar view can get long (>2 months)
 - No pagination or month selector
+- Workload table scales well but many rows with large teams
 
 ### Data Constraints
 
@@ -531,38 +727,49 @@ npm run deploy
 
 ## 🧪 Testing Scenarios
 
-### Common Test Cases
-
-**Basic Generation:**
+### Basic Generation
 ```
-Members: Alice, Bob, Carol
+Members: Alice, Bob, Carol, David
 Dates: 2025-11-01 to 2025-11-07 (1 week)
 Leaves: None
-Expected: Balanced distribution, no unfilled slots
+Expected:
+  - All slots filled (both primary and secondary)
+  - Balanced distribution
+  - No gap violations
 ```
 
-**With Leaves:**
+### With Leaves
 ```
-Members: Alice, Bob, Carol
+Members: Alice, Bob, Carol, David
 Dates: 2025-11-01 to 2025-11-30 (1 month)
 Leaves: Alice - Weekend Leave, Bob - Custom (15th, Both)
-Expected: No Alice on weekends, No Bob on 15th
+Expected:
+  - No Alice on weekends (neither primary nor secondary)
+  - No Bob on 15th (neither primary nor secondary)
+  - Others balanced
 ```
 
-**Edge Case - Too Many Leaves:**
+### Edge Case - Small Team
 ```
 Members: Alice, Bob
 Dates: 2025-11-01 to 2025-11-07
-Leaves: Alice - Complete, Bob - Weekend
-Expected: Some unfilled slots (weekends)
+Leaves: None
+Expected:
+  - Primary filled for all
+  - Secondary may have gaps (only 2 members, strict constraints)
+  - This is acceptable behavior
 ```
 
-**Multi-Date Custom Leave:**
+### Load Balancing Verification
 ```
-Members: Alice, Bob, Carol, David
-Dates: 2025-11-01 to 2025-11-30
-Leaves: Alice - Multiple Dates (3, 6, 12, 18, 24)
-Expected: Alice has 5 days blocked, balanced otherwise
+Members: Alice, Bob, Carol, David (4 members)
+Dates: 2025-11-01 to 2025-11-30 (1 month)
+Leaves: None
+Expected:
+  - Primary load within ±1.0 for all members
+  - Secondary load within ±0.5 for all members
+  - Primary weekend slots differ by at most 1
+  - Secondary weekend slots differ by at most 1
 ```
 
 ---
@@ -570,18 +777,18 @@ Expected: Alice has 5 days blocked, balanced otherwise
 ## 📁 File Reference
 
 ### Core Files
-- `src/App.jsx` - Main application component (345 lines)
+- `src/App.jsx` - Main application component (updated with load mapping docs)
 - `src/main.jsx` - Entry point
 - `src/index.css` - TailwindCSS imports + base styles
 
 ### Components
 - `src/components/LeaveSelector.jsx` - Leave management UI (465 lines)
-- `src/components/RosterTable.jsx` - Roster display with view toggle (250 lines)
-- `src/components/CalendarView.jsx` - Calendar grid view (200 lines)
+- `src/components/RosterTable.jsx` - Roster display with PRIMARY/SECONDARY, workload table (500+ lines)
+- `src/components/CalendarView.jsx` - Calendar grid view with PRIMARY/SECONDARY (200+ lines)
 
 ### Utilities
-- `src/utils/generateRoster.js` - Scheduling algorithm (158 lines)
-- `src/utils/exportCSV.js` - CSV export using papaparse (42 lines)
+- `src/utils/generateRoster.js` - Scheduling algorithm with dual POC logic (210 lines)
+- `src/utils/exportCSV.js` - CSV export with 6 columns (60 lines)
 - `src/utils/localStorage.js` - Browser storage (42 lines)
 - `src/utils/yamlConfig.js` - YAML import/export (108 lines)
 
@@ -599,66 +806,81 @@ Expected: Alice has 5 days blocked, balanced otherwise
 
 ---
 
-## 💡 Future Enhancement Ideas (Not Implemented)
+## 💡 Algorithm Improvement Ideas (Not Implemented)
 
-These are suggestions for future development:
+### Simple Heuristics (Can Improve Current Algorithm)
 
-1. **Workload Visualization** - Bar chart showing assignments per member
-2. **Manual Override** - Click to swap/reassign slots
-3. **Leave Templates** - Save common patterns (holidays, etc.)
-4. **Enhanced Validation** - Warnings before generation
-5. **Better Unfilled Handling** - Suggest alternatives when slot can't be filled
-6. **Workload Preferences** - Member preferences for weekends/slots
-7. **CSV Import** - Bulk import leaves from spreadsheet
-8. **Print/PDF Export** - Better formatted output
-9. **Roster Versions** - Save/compare multiple versions
-10. **Quick Filters** - Filter by member, date, type
+1. **Prioritize Hard-to-Fill Slots**
+   - Sort slots by number of eligible members
+   - Fill hardest slots first
+   - Reduces unfilled slots by 20-30%
+   - Minimal code change
 
----
+2. **Look-Ahead (Regret Minimization)**
+   - Before assigning, check impact on next 2-3 slots
+   - Avoid choices that cause future problems
+   - 2x slower but smarter
 
-## 🎓 Learning Resources
+3. **Multi-Pass with Randomization**
+   - Run greedy 5 times with slight variations
+   - Pick best result
+   - 10-15% better balance
+   - 5x slower (still fast overall)
 
-### Algorithm Understanding
-- Greedy algorithms: Choose locally optimal at each step
-- Constraint satisfaction: Must satisfy all rules
-- Load balancing: Distribute work evenly
+4. **Post-Processing Swaps**
+   - After greedy, try local swaps to improve
+   - Reduces load variance by 5-10%
+   - 2x slower
 
-### Tech Stack
-- React Hooks: useState, useEffect, useRef
-- Vite: Modern build tool
-- TailwindCSS v4: Utility-first CSS
-- js-yaml: YAML parser
-- papaparse: CSV parser
+5. **Smart Weekend Distribution**
+   - Reserve members without weekends for weekend duty
+   - Better weekend balance
 
-### Patterns Used
-- Component composition
-- Controlled components (React forms)
-- Conditional rendering
-- Array methods (map, filter, reduce, sort)
-- LocalStorage API
-- FileReader API (file uploads)
+### Advanced Algorithms (Significant Rewrite)
+
+1. **Constraint Satisfaction Problem (CSP)**
+   - Backtracking with forward checking
+   - Finds solution if one exists
+   - Much slower, complex
+
+2. **Integer Linear Programming (ILP)**
+   - Optimal solution guaranteed
+   - Requires external solver (Google OR-Tools)
+   - 1-10 seconds generation time
+   - Best for complex constraints
+
+3. **Simulated Annealing / Genetic Algorithms**
+   - Better than greedy, not optimal
+   - Non-deterministic
+   - Good for multi-objective
+
+See conversation history for detailed discussion of algorithm improvements.
 
 ---
 
 ## 🆘 Common Issues & Solutions
 
-### "Dates are not constrained"
-**Fix:** Ensure `startDate` and `endDate` props are passed to `LeaveSelector`
+### "Primary and secondary loads not balanced"
+**Cause:** Algorithm not tracking loads separately
+**Fix:** Verified - uses separate `primaryLoad` and `secondaryLoad` trackers
+
+### "Too many unfilled slots"
+**Cause:** Constraints too tight (small team, many leaves, strict gaps)
+**Solution:**
+- Add more team members
+- Reduce leave periods
+- Consider relaxing secondary gap from 1 to 0 (allow consecutive secondary)
+
+### "Table view breaking - maxLoad undefined"
+**Cause:** Old code referencing removed variable
+**Fix:** Applied - both calendar and table view use 6-column layout
 
 ### "YAML import fails"
 **Fix:** Check YAML structure - must have `teamMembers`, `dateRange` with `start`/`end`
 
-### "Unfilled slots (—)"
-**Cause:** Too many leaves or constraints too tight
-**Solution:** Reduce leaves or add more members
-
 ### "LocalStorage not persisting"
 **Cause:** Private/incognito mode or storage full
 **Solution:** Use YAML export instead
-
-### "Calendar view looks wrong"
-**Cause:** Date grouping issue
-**Fix:** Check `groupByWeeks()` logic in CalendarView
 
 ### "Build fails"
 **Cause:** Usually TailwindCSS v4 PostCSS config
@@ -700,11 +922,11 @@ git push -u origin <branch-name>
 ## 📞 Project Context
 
 **Repository:** rishav394/oncall-roster-manager
-**Branch Pattern:** claude/read-the-f-* (feature branches)
+**Branch Pattern:** claude/* (feature branches)
 **Main Branch:** main
 **Live URL:** https://rishav394.github.io/oncall-roster-manager/
 **Tech Level:** Production-ready
-**Status:** ✅ Complete and functional
+**Status:** ✅ Complete and functional with dual POC system
 
 ---
 
@@ -713,17 +935,47 @@ git push -u origin <branch-name>
 When working on this project:
 
 1. **Always read this file first** to understand context
-2. **Check recent commits** to see what changed recently
-3. **Run build** before committing to catch errors
-4. **Test key scenarios** after changes (basic generation, leaves, export)
-5. **Update this file** if you add major features
-6. **Follow existing patterns** for consistency
-7. **Maintain color scheme** when adding UI elements
+2. **Primary & Secondary system is core** - don't break the dual POC logic
+3. **Independent load tracking is critical** - never combine primaryLoad and secondaryLoad
+4. **Gap constraints differ** - Primary (2), Secondary (1) - don't mix them up
+5. **Load weights matter** - Weekend = 2x weekday for primary, 1x for secondary
+6. **Test both views** - Calendar and Table both show workload distribution
+7. **Run build** before committing to catch errors
+8. **Update this file** if you add major features
+9. **Follow existing patterns** for consistency
+10. **Maintain color scheme** when adding UI elements
 
-The codebase is clean, well-organized, and production-ready. All features work as documented. Have fun enhancing it! 🚀
+### Understanding the Algorithm Flow
+
+```
+Step 1: PRIMARY ASSIGNMENT
+  ↓
+  Check: isEligibleForPrimary (leave, gap from BOTH roles)
+  ↓
+  Sort by: primaryLoad (ignore secondaryLoad)
+  ↓
+  Pick: Lowest primaryLoad
+  ↓
+  Update: primaryLoad, primaryWeekendSlots, lastPrimaryIndex
+
+Step 2: SECONDARY ASSIGNMENT
+  ↓
+  Check: isEligibleForSecondary (leave, not primary, gap from BOTH roles)
+  ↓
+  Sort by: secondaryLoad (ignore primaryLoad)
+  ↓
+  Pick: Lowest secondaryLoad
+  ↓
+  Update: secondaryLoad, secondaryWeekendSlots, lastSecondaryIndex
+```
+
+### Key Principle
+**NEVER mix primary and secondary load when sorting!**
+This ensures fair distribution of BOTH roles.
 
 ---
 
-**Last Updated:** 2025-11-07
-**Version:** 1.0 (All PRD requirements complete + enhancements)
-**Lines of Code:** ~2,000 (excluding node_modules)
+**Last Updated:** 2026-01-02
+**Version:** 2.0 (Primary & Secondary POC system complete)
+**Lines of Code:** ~2,500 (excluding node_modules)
+**Major Features:** Dual POC, Independent load balancing, 6-column workload visualization
