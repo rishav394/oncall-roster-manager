@@ -642,6 +642,40 @@ npm run deploy
 - `vite.config.js`: `base: '/oncall-roster-manager/'`
 - GitHub Settings > Pages > Source: GitHub Actions
 
+### Deploy to Cloudflare Pages
+
+**Cloudflare Dashboard Integration (Recommended)**
+1. Login to [Cloudflare Dashboard](https://dash.cloudflare.com)
+2. Navigate to Workers & Pages > Create application > Pages
+3. Install Cloudflare Pages app to your GitHub repository
+4. Connect to Git and select repository
+5. Configure build settings:
+   - Build command: `npm run build:cloudflare`
+   - Build output directory: `dist`
+   - Environment variable: `VITE_DEPLOY_TARGET=cloudflare`
+6. Deploy - get a free `.pages.dev` URL
+7. Future pushes to `main` auto-deploy
+
+**Manual Deployment with Wrangler CLI**
+```bash
+npm install -g wrangler
+wrangler login
+npm run build:cloudflare
+wrangler pages deploy dist --project-name=oncall-roster-manager
+```
+
+**Configuration:**
+- `vite.config.js`: `base: '/'` (when `VITE_DEPLOY_TARGET=cloudflare`)
+- `wrangler.toml`: Cloudflare Pages configuration
+- See `CLOUDFLARE_DEPLOYMENT.md` for detailed guide
+
+**Benefits:**
+- Global CDN (300+ edge locations)
+- Unlimited bandwidth (free tier)
+- Automatic SSL certificates
+- Faster builds and deployments
+- Built-in Web Analytics
+
 ---
 
 ## 📝 Recent Major Changes (Chronological)
@@ -793,15 +827,17 @@ Expected:
 - `src/utils/yamlConfig.js` - YAML import/export (108 lines)
 
 ### Configuration
-- `vite.config.js` - Vite config with base path
+- `vite.config.js` - Vite config with dynamic base path (GitHub Pages / Cloudflare Pages)
+- `wrangler.toml` - Cloudflare Pages configuration
 - `tailwind.config.js` - TailwindCSS v4 config
 - `postcss.config.js` - PostCSS with TailwindCSS plugin
-- `package.json` - Dependencies and scripts
-- `.github/workflows/deploy.yml` - GitHub Actions deployment
+- `package.json` - Dependencies and scripts (includes `build:cloudflare`)
+- `.github/workflows/deploy.yml` - GitHub Pages deployment workflow
 
 ### Documentation
 - `README.md` - Project overview and setup
 - `CLAUDE.md` - This file (comprehensive guide)
+- `CLOUDFLARE_DEPLOYMENT.md` - Detailed Cloudflare Pages deployment guide
 - `Oncall_Roster_Scheduler_PRD_and_Problem.md` - Original requirements
 
 ---
@@ -897,8 +933,11 @@ npm install
 # Development server
 npm run dev
 
-# Build for production
+# Build for production (GitHub Pages)
 npm run build
+
+# Build for Cloudflare Pages
+npm run build:cloudflare
 
 # Preview production build
 npm run preview
