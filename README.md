@@ -90,6 +90,8 @@ npm run preview
 
 ## Deployment
 
+This application can be deployed to both GitHub Pages and Cloudflare Pages.
+
 ### GitHub Pages
 
 The application is configured for automatic deployment to GitHub Pages.
@@ -119,6 +121,37 @@ This will build the app and push it to the `gh-pages` branch.
 
 After deployment, your app will be available at:
 `https://rishav394.github.io/oncall-roster-manager/`
+
+### Cloudflare Pages
+
+For improved performance and global CDN distribution, you can deploy to Cloudflare Pages.
+
+#### Quick Setup
+
+1. **Connect to Cloudflare Pages**
+   - Login to [Cloudflare Dashboard](https://dash.cloudflare.com)
+   - Go to Workers & Pages > Create application > Pages
+   - Connect your GitHub repository
+
+2. **Configure Build Settings**
+   - Build command: `npm run build:cloudflare`
+   - Build output directory: `dist`
+   - Environment variable: `VITE_DEPLOY_TARGET=cloudflare`
+
+3. **Deploy**
+   - Cloudflare automatically deploys on every push to `main`
+   - Get a free `.pages.dev` subdomain
+   - Optional: Add custom domain
+
+#### Benefits of Cloudflare Pages
+
+- **Global CDN**: 300+ edge locations worldwide
+- **Unlimited bandwidth**: No bandwidth limits on free tier
+- **Auto SSL**: Automatic HTTPS certificates
+- **Fast builds**: Parallel build processing
+- **Web Analytics**: Privacy-focused analytics included
+
+For detailed instructions, see [CLOUDFLARE_DEPLOYMENT.md](CLOUDFLARE_DEPLOYMENT.md)
 
 ## License
 
